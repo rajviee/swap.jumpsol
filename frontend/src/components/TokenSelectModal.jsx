@@ -127,20 +127,24 @@ export const TokenSelectModal = memo(({
   defaultToSolana = false,
 }) => {
   const [search, setSearch] = useState('');
-  const [activeChainId, setActiveChainId] = useState(selectedChainId);
+  
+  // Compute initial chain ID
+  const getInitialChainId = useCallback(() => {
+    if (defaultToSolana && chains.some(c => c.id === SOLANA_CHAIN_ID)) {
+      return SOLANA_CHAIN_ID;
+    }
+    return selectedChainId || chains[0]?.id || 1; // Default to Ethereum
+  }, [defaultToSolana, chains, selectedChainId]);
+  
+  const [activeChainId, setActiveChainId] = useState(() => getInitialChainId());
 
   // Reset state when modal opens
   useEffect(() => {
     if (open) {
       setSearch('');
-      // Default to Solana if specified, otherwise use selected or first chain
-      if (defaultToSolana && chains.some(c => c.id === SOLANA_CHAIN_ID)) {
-        setActiveChainId(SOLANA_CHAIN_ID);
-      } else {
-        setActiveChainId(selectedChainId || (chains[0]?.id));
-      }
+      setActiveChainId(getInitialChainId());
     }
-  }, [open, selectedChainId, chains, defaultToSolana]);
+  }, [open, getInitialChainId]);
 
   // Get popular chains first - memoized
   const sortedChains = useMemo(() => {
