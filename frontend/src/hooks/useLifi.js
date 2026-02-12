@@ -192,11 +192,11 @@ export function useTokens(chainIds = []) {
             // Add SOL if not present
             solanaTokens.unshift(FALLBACK_SOLANA_TOKENS[0]);
           }
-          fetchedTokens[SOLANA_CHAIN_ID] = solanaTokens;
+          normalizedTokens[SOLANA_CHAIN_ID] = solanaTokens;
         }
       }
       
-      setTokens(fetchedTokens);
+      setTokens(normalizedTokens);
     } catch (err) {
       console.error('[LI.FI] Failed to fetch tokens:', err);
       setError(err.message || 'Failed to fetch tokens');
