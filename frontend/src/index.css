@@ -50,6 +50,7 @@ body {
     background-color: #000000;
     color: #ffffff;
     min-height: 100vh;
+    overflow-x: hidden;
 }
 
 code {
@@ -86,17 +87,34 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #444444;
+    background: #555555;
 }
 
-/* Horizontal scrollbar - visible and smooth */
+/* Horizontal chain selector - FIXED */
+.chain-scroll-container {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+}
+
 .chain-scroll {
+    display: flex;
+    gap: 8px;
+    padding-bottom: 8px;
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
     scrollbar-width: thin;
-    scrollbar-color: #333333 #111111;
+    scrollbar-color: transparent transparent;
+    cursor: grab;
+    user-select: none;
+    width: 100%;
+    flex-wrap: nowrap;
+}
+
+.chain-scroll:hover {
+    scrollbar-color: #444444 transparent;
 }
 
 .chain-scroll::-webkit-scrollbar {
@@ -104,17 +122,28 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .chain-scroll::-webkit-scrollbar-track {
-    background: #111111;
+    background: transparent;
     border-radius: 2px;
 }
 
 .chain-scroll::-webkit-scrollbar-thumb {
-    background: #444444;
+    background: transparent;
     border-radius: 2px;
+    transition: background 0.2s ease;
 }
 
-.chain-scroll::-webkit-scrollbar-thumb:hover {
-    background: #555555;
+.chain-scroll:hover::-webkit-scrollbar-thumb {
+    background: #444444;
+}
+
+.chain-scroll:active {
+    cursor: grabbing;
+}
+
+/* Chain filter button - prevent shrinking */
+.chain-filter-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 /* Selection */
@@ -186,6 +215,55 @@ h1, h2, h3, h4, h5, h6 {
 
 .token-row:hover {
     background-color: rgba(193, 255, 114, 0.05);
+}
+
+/* Responsive modal fixes */
+@media (max-width: 640px) {
+    .swap-card {
+        padding: 16px !important;
+        margin: 0 8px;
+        max-width: calc(100vw - 16px) !important;
+    }
+    
+    .token-selector {
+        padding: 6px 10px !important;
+    }
+    
+    .swap-input {
+        font-size: 20px !important;
+        height: 48px !important;
+    }
+}
+
+/* Modal responsive */
+[role="dialog"] {
+    max-height: calc(100vh - 32px) !important;
+    max-height: calc(100dvh - 32px) !important;
+    overflow: hidden;
+}
+
+[role="dialog"] > div {
+    max-height: inherit;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Token list virtualization helper */
+.token-list-container {
+    contain: layout style;
+}
+
+.token-list-item {
+    contain: layout style;
+}
+
+/* Prevent layout shift */
+.chain-icon-placeholder {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    min-height: 16px;
 }
 
 /* Debug wrapper fix */

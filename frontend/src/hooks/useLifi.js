@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { lifiApi } from '../services/api';
 
-// Solana chain ID used by LI.FI
+// Chain IDs
 export const SOLANA_CHAIN_ID = 1151111081099710;
+export const TRON_CHAIN_ID = 728126428;
+export const BITCOIN_CHAIN_ID = 20000000000001; // Custom ID for Bitcoin display
 
 // Chain ID mapping for icons and names with real logo URLs
 export const CHAIN_INFO = {
@@ -48,6 +50,27 @@ export const CHAIN_INFO = {
     color: '#E84142',
     logoURI: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/avalanche.svg'
   },
+  8453: { 
+    name: 'Base', 
+    symbol: 'ETH', 
+    icon: 'base', 
+    color: '#0052FF',
+    logoURI: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/base.svg'
+  },
+  324: { 
+    name: 'zkSync', 
+    symbol: 'ETH', 
+    icon: 'zksync', 
+    color: '#8C8DFC',
+    logoURI: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/zksync.svg'
+  },
+  100: { 
+    name: 'Gnosis', 
+    symbol: 'xDAI', 
+    icon: 'gnosis', 
+    color: '#04795B',
+    logoURI: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/gnosis.svg'
+  },
   [SOLANA_CHAIN_ID]: { 
     name: 'Solana', 
     symbol: 'SOL', 
@@ -55,15 +78,29 @@ export const CHAIN_INFO = {
     color: '#9945FF',
     logoURI: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/solana.svg'
   },
+  [TRON_CHAIN_ID]: { 
+    name: 'Tron', 
+    symbol: 'TRX', 
+    icon: 'tron', 
+    color: '#FF0013',
+    logoURI: 'https://cryptologos.cc/logos/tron-trx-logo.svg'
+  },
+  [BITCOIN_CHAIN_ID]: { 
+    name: 'Bitcoin', 
+    symbol: 'BTC', 
+    icon: 'btc', 
+    color: '#F7931A',
+    logoURI: 'https://cryptologos.cc/logos/bitcoin-btc-logo.svg'
+  },
 };
 
-// Popular chain IDs to show by default - INCLUDES SOLANA
-export const POPULAR_CHAIN_IDS = [1, 42161, 10, 137, 56, 43114, SOLANA_CHAIN_ID];
+// Popular chain IDs to show by default - includes Tron and Bitcoin for display
+export const POPULAR_CHAIN_IDS = [1, 42161, 10, 137, 56, 43114, 8453, SOLANA_CHAIN_ID, TRON_CHAIN_ID, BITCOIN_CHAIN_ID];
 
-// Fallback Solana tokens if API fails
+// Fallback Solana tokens
 export const FALLBACK_SOLANA_TOKENS = [
   {
-    address: '11111111111111111111111111111111',
+    address: 'So11111111111111111111111111111111111111112',
     symbol: 'SOL',
     name: 'Solana',
     decimals: 9,
@@ -91,6 +128,78 @@ export const FALLBACK_SOLANA_TOKENS = [
   },
 ];
 
+// Fallback Tron tokens (not directly supported by LI.FI but shown for user awareness)
+export const FALLBACK_TRON_TOKENS = [
+  {
+    address: 'TNUC9Qb1rRpS5CbWLmNMxXBjyFoydXjWFR',
+    symbol: 'TRX',
+    name: 'Tron',
+    decimals: 6,
+    chainId: TRON_CHAIN_ID,
+    logoURI: 'https://cryptologos.cc/logos/tron-trx-logo.svg',
+    priceUSD: '0',
+    isNative: true,
+  },
+  {
+    address: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
+    symbol: 'USDT',
+    name: 'Tether USD (TRC20)',
+    decimals: 6,
+    chainId: TRON_CHAIN_ID,
+    logoURI: 'https://cryptologos.cc/logos/tether-usdt-logo.svg',
+    priceUSD: '1',
+  },
+  {
+    address: 'TCFLL5dx5ZJdKnWuesXxi1VPwjLVmWZZy9',
+    symbol: 'WTRX',
+    name: 'Wrapped TRX',
+    decimals: 6,
+    chainId: TRON_CHAIN_ID,
+    logoURI: 'https://cryptologos.cc/logos/tron-trx-logo.svg',
+    priceUSD: '0',
+  },
+];
+
+// Fallback Bitcoin tokens
+export const FALLBACK_BITCOIN_TOKENS = [
+  {
+    address: 'btc',
+    symbol: 'BTC',
+    name: 'Bitcoin',
+    decimals: 8,
+    chainId: BITCOIN_CHAIN_ID,
+    logoURI: 'https://cryptologos.cc/logos/bitcoin-btc-logo.svg',
+    priceUSD: '0',
+    isNative: true,
+  },
+];
+
+// Custom chains that LI.FI doesn't support but we show
+export const CUSTOM_CHAINS = [
+  {
+    id: TRON_CHAIN_ID,
+    name: 'Tron',
+    key: 'tron',
+    chainType: 'TVM',
+    coin: 'TRX',
+    mainnet: true,
+    logoURI: CHAIN_INFO[TRON_CHAIN_ID].logoURI,
+    isCustom: true,
+    notSupported: true,
+  },
+  {
+    id: BITCOIN_CHAIN_ID,
+    name: 'Bitcoin',
+    key: 'btc',
+    chainType: 'UTXO',
+    coin: 'BTC',
+    mainnet: true,
+    logoURI: CHAIN_INFO[BITCOIN_CHAIN_ID].logoURI,
+    isCustom: true,
+    notSupported: true,
+  },
+];
+
 export function useChains() {
   const [chains, setChains] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -100,23 +209,18 @@ export function useChains() {
     setLoading(true);
     setError(null);
     try {
-      console.log('[LI.FI] Fetching chains...');
       const data = await lifiApi.getChains();
       const allChains = data.chains || [];
       
-      console.log('[LI.FI] Chains received:', allChains.length);
-      
-      // Check if Solana is included
+      // Check for Solana
       const hasSolana = allChains.some(c => c.id === SOLANA_CHAIN_ID);
-      console.log('[LI.FI] Solana in chain list:', hasSolana);
       
-      // Sort: popular chains first, then others
+      // Sort: popular chains first
       const popularChains = allChains.filter(c => POPULAR_CHAIN_IDS.includes(c.id));
       const otherChains = allChains.filter(c => !POPULAR_CHAIN_IDS.includes(c.id));
       
-      // Ensure Solana is in the list if not present
+      // Add Solana if not present
       if (!hasSolana) {
-        console.log('[LI.FI] Adding Solana chain manually');
         popularChains.push({
           id: SOLANA_CHAIN_ID,
           name: 'Solana',
@@ -128,10 +232,20 @@ export function useChains() {
         });
       }
       
-      setChains([...popularChains, ...otherChains]);
+      // Add custom chains (Tron, Bitcoin) at the end of popular chains
+      const finalChains = [...popularChains, ...CUSTOM_CHAINS.filter(c => !popularChains.some(p => p.id === c.id)), ...otherChains];
+      
+      setChains(finalChains);
     } catch (err) {
       console.error('[LI.FI] Failed to fetch chains:', err);
       setError(err.message || 'Failed to fetch chains');
+      // Set fallback chains on error
+      setChains([
+        { id: 1, name: 'Ethereum', key: 'eth', chainType: 'EVM', coin: 'ETH', mainnet: true, logoURI: CHAIN_INFO[1].logoURI },
+        { id: 56, name: 'BNB Chain', key: 'bsc', chainType: 'EVM', coin: 'BNB', mainnet: true, logoURI: CHAIN_INFO[56].logoURI },
+        { id: 137, name: 'Polygon', key: 'pol', chainType: 'EVM', coin: 'MATIC', mainnet: true, logoURI: CHAIN_INFO[137].logoURI },
+        ...CUSTOM_CHAINS,
+      ]);
     } finally {
       setLoading(false);
     }
@@ -149,51 +263,65 @@ export function useTokens(chainIds = []) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const chainIdsKey = useMemo(() => chainIds.sort().join(','), [chainIds]);
+  // Filter out custom chain IDs that LI.FI doesn't support
+  const supportedChainIds = useMemo(() => 
+    chainIds.filter(id => id !== TRON_CHAIN_ID && id !== BITCOIN_CHAIN_ID),
+    [chainIds]
+  );
+  
+  const chainIdsKey = useMemo(() => supportedChainIds.sort((a,b) => a-b).join(','), [supportedChainIds]);
 
   const fetchTokens = useCallback(async () => {
-    if (chainIds.length === 0) {
+    if (supportedChainIds.length === 0 && !chainIds.includes(TRON_CHAIN_ID) && !chainIds.includes(BITCOIN_CHAIN_ID)) {
       setTokens({});
       return;
     }
     
     setLoading(true);
     setError(null);
+    
     try {
-      console.log('[LI.FI] Fetching tokens for chains:', chainIds);
-      const data = await lifiApi.getTokens(chainIds);
-      const fetchedTokens = data.tokens || {};
+      let normalizedTokens = {};
       
-      console.log('[LI.FI] Tokens received for chains:', Object.keys(fetchedTokens));
+      // Fetch from LI.FI for supported chains
+      if (supportedChainIds.length > 0) {
+        const data = await lifiApi.getTokens(supportedChainIds);
+        const fetchedTokens = data.tokens || {};
+        
+        // Normalize keys to numbers
+        Object.keys(fetchedTokens).forEach(key => {
+          normalizedTokens[Number(key)] = fetchedTokens[key];
+        });
+      }
       
-      // Normalize keys to numbers for consistent access
-      const normalizedTokens = {};
-      Object.keys(fetchedTokens).forEach(key => {
-        normalizedTokens[Number(key)] = fetchedTokens[key];
-      });
-      
-      // Add fallback Solana tokens if Solana chain is requested but no tokens returned
+      // Add Solana fallback if needed
       if (chainIds.includes(SOLANA_CHAIN_ID)) {
         const solanaTokens = normalizedTokens[SOLANA_CHAIN_ID] || [];
-        console.log('[LI.FI] Solana tokens count:', solanaTokens.length);
-        
         if (solanaTokens.length === 0) {
-          console.log('[LI.FI] Using fallback Solana tokens');
           normalizedTokens[SOLANA_CHAIN_ID] = FALLBACK_SOLANA_TOKENS;
         } else {
           // Ensure SOL is at the top
           const solIndex = solanaTokens.findIndex(t => 
-            t.symbol === 'SOL' || t.address === '11111111111111111111111111111111'
+            t.symbol === 'SOL' || t.address === 'So11111111111111111111111111111111111111112'
           );
           if (solIndex > 0) {
             const sol = solanaTokens.splice(solIndex, 1)[0];
             solanaTokens.unshift(sol);
           } else if (solIndex === -1) {
-            // Add SOL if not present
             solanaTokens.unshift(FALLBACK_SOLANA_TOKENS[0]);
           }
           normalizedTokens[SOLANA_CHAIN_ID] = solanaTokens;
         }
+      }
+      
+      // Add Tron tokens (custom, not from LI.FI)
+      if (chainIds.includes(TRON_CHAIN_ID)) {
+        normalizedTokens[TRON_CHAIN_ID] = FALLBACK_TRON_TOKENS;
+      }
+      
+      // Add Bitcoin tokens (custom, not from LI.FI)
+      if (chainIds.includes(BITCOIN_CHAIN_ID)) {
+        normalizedTokens[BITCOIN_CHAIN_ID] = FALLBACK_BITCOIN_TOKENS;
       }
       
       setTokens(normalizedTokens);
@@ -201,24 +329,27 @@ export function useTokens(chainIds = []) {
       console.error('[LI.FI] Failed to fetch tokens:', err);
       setError(err.message || 'Failed to fetch tokens');
       
-      // Use fallback tokens for Solana on error
+      // Use fallback tokens on error
+      const fallbackTokens = {};
       if (chainIds.includes(SOLANA_CHAIN_ID)) {
-        console.log('[LI.FI] Using fallback Solana tokens due to error');
-        setTokens(prev => ({
-          ...prev,
-          [SOLANA_CHAIN_ID]: FALLBACK_SOLANA_TOKENS,
-        }));
+        fallbackTokens[SOLANA_CHAIN_ID] = FALLBACK_SOLANA_TOKENS;
       }
+      if (chainIds.includes(TRON_CHAIN_ID)) {
+        fallbackTokens[TRON_CHAIN_ID] = FALLBACK_TRON_TOKENS;
+      }
+      if (chainIds.includes(BITCOIN_CHAIN_ID)) {
+        fallbackTokens[BITCOIN_CHAIN_ID] = FALLBACK_BITCOIN_TOKENS;
+      }
+      setTokens(fallbackTokens);
     } finally {
       setLoading(false);
     }
-  }, [chainIdsKey]);
+  }, [chainIdsKey, chainIds]);
 
   useEffect(() => {
     fetchTokens();
   }, [fetchTokens]);
 
-  // Get tokens for a specific chain
   const getTokensForChain = useCallback((chainId) => {
     return tokens[chainId] || [];
   }, [tokens]);
@@ -234,6 +365,14 @@ export function useQuote() {
   const fetchQuote = useCallback(async (params) => {
     if (!params.fromChain || !params.toChain || !params.fromToken || 
         !params.toToken || !params.fromAmount || !params.fromAddress) {
+      setQuote(null);
+      return null;
+    }
+    
+    // Check if chains are supported by LI.FI
+    if (params.fromChain === TRON_CHAIN_ID || params.toChain === TRON_CHAIN_ID ||
+        params.fromChain === BITCOIN_CHAIN_ID || params.toChain === BITCOIN_CHAIN_ID) {
+      setError('This chain is not yet supported for swaps. Coming soon!');
       setQuote(null);
       return null;
     }
@@ -328,7 +467,7 @@ export function useTxStatus() {
   return { status, loading, error, fetchStatus };
 }
 
-// Utility function to format token amount
+// Utility functions
 export function formatTokenAmount(amount, decimals, precision = 6) {
   if (!amount || !decimals) return '0';
   const value = Number(amount) / Math.pow(10, decimals);
@@ -340,7 +479,6 @@ export function formatTokenAmount(amount, decimals, precision = 6) {
   });
 }
 
-// Utility function to parse token amount to wei
 export function parseTokenAmount(amount, decimals) {
   if (!amount || !decimals) return '0';
   const value = parseFloat(amount);
@@ -348,7 +486,6 @@ export function parseTokenAmount(amount, decimals) {
   return Math.floor(value * Math.pow(10, decimals)).toString();
 }
 
-// Format USD value
 export function formatUSD(value) {
   if (!value) return '$0.00';
   const num = parseFloat(value);
@@ -361,7 +498,6 @@ export function formatUSD(value) {
   }).format(num);
 }
 
-// Format time estimate
 export function formatTimeEstimate(seconds) {
   if (!seconds) return 'Unknown';
   if (seconds < 60) return `~${seconds}s`;
@@ -369,15 +505,18 @@ export function formatTimeEstimate(seconds) {
   return `~${Math.round(seconds / 3600)}h`;
 }
 
-// Get chain logo URL
 export function getChainLogoUrl(chainId) {
   const info = CHAIN_INFO[chainId];
   if (info?.logoURI) return info.logoURI;
   return null;
 }
 
-// Get token logo URL with fallback
 export function getTokenLogoUrl(token) {
   if (token?.logoURI) return token.logoURI;
   return null;
+}
+
+export function isChainSupported(chainId) {
+  // Tron and Bitcoin are displayed but not yet supported for swaps
+  return chainId !== TRON_CHAIN_ID && chainId !== BITCOIN_CHAIN_ID;
 }

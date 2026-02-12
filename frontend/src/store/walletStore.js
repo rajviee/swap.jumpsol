@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 
-// Solana chain ID used by LI.FI
-const SOLANA_CHAIN_ID = 1151111081099710;
+// Chain IDs
+export const SOLANA_CHAIN_ID = 1151111081099710;
+export const TRON_CHAIN_ID = 728126428; // Tron chain ID
+export const BITCOIN_CHAIN_ID = 0; // Bitcoin (not directly supported by LI.FI)
 
 const SUPPORTED_EVM_CHAINS = {
   1: { name: 'Ethereum', symbol: 'ETH', icon: 'ethereum' },
@@ -10,6 +12,10 @@ const SUPPORTED_EVM_CHAINS = {
   137: { name: 'Polygon', symbol: 'MATIC', icon: 'polygon' },
   56: { name: 'BNB Chain', symbol: 'BNB', icon: 'bsc' },
   43114: { name: 'Avalanche', symbol: 'AVAX', icon: 'avalanche' },
+  8453: { name: 'Base', symbol: 'ETH', icon: 'base' },
+  100: { name: 'Gnosis', symbol: 'xDAI', icon: 'gnosis' },
+  250: { name: 'Fantom', symbol: 'FTM', icon: 'fantom' },
+  324: { name: 'zkSync Era', symbol: 'ETH', icon: 'zksync' },
 };
 
 const SOLANA_CHAIN = {
@@ -19,6 +25,20 @@ const SOLANA_CHAIN = {
   icon: 'solana',
 };
 
+const TRON_CHAIN = {
+  id: TRON_CHAIN_ID,
+  name: 'Tron',
+  symbol: 'TRX',
+  icon: 'tron',
+};
+
+const BITCOIN_CHAIN = {
+  id: BITCOIN_CHAIN_ID,
+  name: 'Bitcoin',
+  symbol: 'BTC',
+  icon: 'bitcoin',
+};
+
 export const useWalletStore = create((set, get) => ({
   // EVM Wallet State
   evmAddress: null,
@@ -26,6 +46,7 @@ export const useWalletStore = create((set, get) => ({
   evmBalance: null,
   evmConnected: false,
   evmConnecting: false,
+  evmWalletType: null, // 'metamask' | 'trustwallet' | 'walletconnect'
   
   // Solana Wallet State
   solanaAddress: null,
@@ -33,7 +54,13 @@ export const useWalletStore = create((set, get) => ({
   solanaConnected: false,
   solanaConnecting: false,
   
-  // Active wallet type - 'evm' | 'solana' | null
+  // Tron Wallet State
+  tronAddress: null,
+  tronBalance: null,
+  tronConnected: false,
+  tronConnecting: false,
+  
+  // Active wallet type - 'evm' | 'solana' | 'tron' | null
   activeWalletType: null,
   
   // UI State
@@ -42,42 +69,65 @@ export const useWalletStore = create((set, get) => ({
   // Supported chains
   supportedEvmChains: SUPPORTED_EVM_CHAINS,
   solanaChain: SOLANA_CHAIN,
+  tronChain: TRON_CHAIN,
+  bitcoinChain: BITCOIN_CHAIN,
   solanaChainId: SOLANA_CHAIN_ID,
+  tronChainId: TRON_CHAIN_ID,
+  bitcoinChainId: BITCOIN_CHAIN_ID,
   
   // Actions
   setShowWalletModal: (show) => set({ showWalletModal: show }),
   
-  // EVM Connection
-  connectMetaMask: async () => {
-    if (typeof window.ethereum === 'undefined') {
-      throw new Error('MetaMask is not installed');
+  // Generic EVM Connection (MetaMask, Trust Wallet, etc.)
+  connectEvm: async (walletType = 'metamask') => {
+    let provider = null;
+    
+    if (walletType === 'trustwallet') {
+      // Trust Wallet injects as window.ethereum or window.trustwallet
+      provider = window.trustwallet || window.ethereum;
+      if (!provider?.isTrust && !provider?.isTrustWallet) {
+        // Check if Trust Wallet is available in window.ethereum
+        if (window.ethereum?.providers) {
+          provider = window.ethereum.providers.find(p => p.isTrust || p.isTrustWallet);
+        }
+      }
+      if (!provider) {
+        throw new Error('Trust Wallet is not installed');
+      }
+    } else {
+      // MetaMask or generic
+      provider = window.ethereum;
+      if (!provider) {
+        throw new Error('No EVM wallet found. Please install MetaMask or Trust Wallet.');
+      }
     }
     
     set({ evmConnecting: true });
     
     try {
-      console.log('[Wallet] Connecting MetaMask...');
-      const accounts = await window.ethereum.request({ 
+      console.log(`[Wallet] Connecting ${walletType}...`);
+      const accounts = await provider.request({ 
         method: 'eth_requestAccounts' 
       });
       
-      const chainId = await window.ethereum.request({ 
+      const chainId = await provider.request({ 
         method: 'eth_chainId' 
       });
       
       const parsedChainId = parseInt(chainId, 16);
-      console.log('[Wallet] MetaMask connected:', { address: accounts[0], chainId: parsedChainId });
+      console.log(`[Wallet] ${walletType} connected:`, { address: accounts[0], chainId: parsedChainId });
       
       set({
         evmAddress: accounts[0],
         evmChainId: parsedChainId,
         evmConnected: true,
         evmConnecting: false,
+        evmWalletType: walletType,
         activeWalletType: 'evm',
       });
       
       // Setup listeners
-      window.ethereum.on('accountsChanged', (accounts) => {
+      provider.on('accountsChanged', (accounts) => {
         if (accounts.length === 0) {
           get().disconnectEvm();
         } else {
@@ -85,16 +135,26 @@ export const useWalletStore = create((set, get) => ({
         }
       });
       
-      window.ethereum.on('chainChanged', (chainId) => {
+      provider.on('chainChanged', (chainId) => {
         set({ evmChainId: parseInt(chainId, 16) });
       });
       
       return accounts[0];
     } catch (error) {
-      console.error('[Wallet] MetaMask connection error:', error);
+      console.error(`[Wallet] ${walletType} connection error:`, error);
       set({ evmConnecting: false });
       throw error;
     }
+  },
+  
+  // Legacy MetaMask connect (calls connectEvm)
+  connectMetaMask: async () => {
+    return get().connectEvm('metamask');
+  },
+  
+  // Trust Wallet connect
+  connectTrustWallet: async () => {
+    return get().connectEvm('trustwallet');
   },
   
   disconnectEvm: () => {
@@ -104,35 +164,35 @@ export const useWalletStore = create((set, get) => ({
       evmChainId: null,
       evmBalance: null,
       evmConnected: false,
-      activeWalletType: get().solanaConnected ? 'solana' : null,
+      evmWalletType: null,
+      activeWalletType: get().solanaConnected ? 'solana' : (get().tronConnected ? 'tron' : null),
     });
   },
   
   switchEvmChain: async (chainId) => {
-    if (typeof window.ethereum === 'undefined') {
-      throw new Error('MetaMask is not installed');
+    const provider = window.ethereum;
+    if (!provider) {
+      throw new Error('No EVM wallet found');
     }
     
     const hexChainId = `0x${chainId.toString(16)}`;
     
     try {
-      await window.ethereum.request({
+      await provider.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: hexChainId }],
       });
     } catch (error) {
-      // Chain not added, try to add it
       if (error.code === 4902) {
-        const chainInfo = SUPPORTED_EVM_CHAINS[chainId];
-        if (!chainInfo) {
+        const chainParams = getChainParams(chainId);
+        if (chainParams) {
+          await provider.request({
+            method: 'wallet_addEthereumChain',
+            params: [chainParams],
+          });
+        } else {
           throw new Error(`Chain ${chainId} is not supported`);
         }
-        
-        const chainParams = getChainParams(chainId);
-        await window.ethereum.request({
-          method: 'wallet_addEthereumChain',
-          params: [chainParams],
-        });
       } else {
         throw error;
       }
@@ -161,7 +221,6 @@ export const useWalletStore = create((set, get) => ({
         activeWalletType: 'solana',
       });
       
-      // Setup listeners
       window.solana.on('disconnect', () => {
         get().disconnectSolana();
       });
@@ -191,7 +250,53 @@ export const useWalletStore = create((set, get) => ({
       solanaAddress: null,
       solanaBalance: null,
       solanaConnected: false,
-      activeWalletType: get().evmConnected ? 'evm' : null,
+      activeWalletType: get().evmConnected ? 'evm' : (get().tronConnected ? 'tron' : null),
+    });
+  },
+  
+  // Tron Connection (TronLink)
+  connectTron: async () => {
+    if (typeof window.tronWeb === 'undefined' || !window.tronLink) {
+      throw new Error('TronLink wallet is not installed');
+    }
+    
+    set({ tronConnecting: true });
+    
+    try {
+      console.log('[Wallet] Connecting TronLink...');
+      
+      // Request account access
+      const res = await window.tronLink.request({ method: 'tron_requestAccounts' });
+      
+      if (res.code !== 200) {
+        throw new Error(res.message || 'Failed to connect TronLink');
+      }
+      
+      const address = window.tronWeb.defaultAddress.base58;
+      console.log('[Wallet] TronLink connected:', { address });
+      
+      set({
+        tronAddress: address,
+        tronConnected: true,
+        tronConnecting: false,
+        activeWalletType: 'tron',
+      });
+      
+      return address;
+    } catch (error) {
+      console.error('[Wallet] TronLink connection error:', error);
+      set({ tronConnecting: false });
+      throw error;
+    }
+  },
+  
+  disconnectTron: () => {
+    console.log('[Wallet] Disconnecting Tron wallet');
+    set({
+      tronAddress: null,
+      tronBalance: null,
+      tronConnected: false,
+      activeWalletType: get().evmConnected ? 'evm' : (get().solanaConnected ? 'solana' : null),
     });
   },
   
@@ -204,6 +309,13 @@ export const useWalletStore = create((set, get) => ({
   // Utility
   getActiveWallet: () => {
     const state = get();
+    if (state.activeWalletType === 'tron' && state.tronConnected) {
+      return {
+        type: 'tron',
+        address: state.tronAddress,
+        chainId: TRON_CHAIN_ID,
+      };
+    }
     if (state.activeWalletType === 'solana' && state.solanaConnected) {
       return {
         type: 'solana',
@@ -218,36 +330,45 @@ export const useWalletStore = create((set, get) => ({
         chainId: state.evmChainId,
       };
     }
-    // Fallback to whichever is connected
+    // Fallback
+    if (state.tronConnected) {
+      return { type: 'tron', address: state.tronAddress, chainId: TRON_CHAIN_ID };
+    }
     if (state.solanaConnected) {
-      return {
-        type: 'solana',
-        address: state.solanaAddress,
-        chainId: SOLANA_CHAIN_ID,
-      };
+      return { type: 'solana', address: state.solanaAddress, chainId: SOLANA_CHAIN_ID };
     }
     if (state.evmConnected) {
-      return {
-        type: 'evm',
-        address: state.evmAddress,
-        chainId: state.evmChainId,
-      };
+      return { type: 'evm', address: state.evmAddress, chainId: state.evmChainId };
     }
     return null;
   },
   
   isAnyWalletConnected: () => {
     const state = get();
-    return state.evmConnected || state.solanaConnected;
+    return state.evmConnected || state.solanaConnected || state.tronConnected;
   },
   
-  // Get the default chain based on connected wallet
   getDefaultChainId: () => {
     const state = get();
-    if (state.activeWalletType === 'solana' || (!state.evmConnected && state.solanaConnected)) {
-      return SOLANA_CHAIN_ID;
+    if (state.activeWalletType === 'tron') return TRON_CHAIN_ID;
+    if (state.activeWalletType === 'solana') return SOLANA_CHAIN_ID;
+    return state.evmChainId || 1;
+  },
+  
+  // Get all connected wallet addresses for fetching balances
+  getAllConnectedAddresses: () => {
+    const state = get();
+    const addresses = [];
+    if (state.evmConnected && state.evmAddress) {
+      addresses.push({ type: 'evm', address: state.evmAddress, chainId: state.evmChainId });
     }
-    return state.evmChainId || 1; // Default to Ethereum
+    if (state.solanaConnected && state.solanaAddress) {
+      addresses.push({ type: 'solana', address: state.solanaAddress, chainId: SOLANA_CHAIN_ID });
+    }
+    if (state.tronConnected && state.tronAddress) {
+      addresses.push({ type: 'tron', address: state.tronAddress, chainId: TRON_CHAIN_ID });
+    }
+    return addresses;
   },
 }));
 
@@ -296,9 +417,21 @@ function getChainParams(chainId) {
       rpcUrls: ['https://api.avax.network/ext/bc/C/rpc'],
       blockExplorerUrls: ['https://snowtrace.io'],
     },
+    8453: {
+      chainId: '0x2105',
+      chainName: 'Base',
+      nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+      rpcUrls: ['https://mainnet.base.org'],
+      blockExplorerUrls: ['https://basescan.org'],
+    },
+    324: {
+      chainId: '0x144',
+      chainName: 'zkSync Era',
+      nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+      rpcUrls: ['https://mainnet.era.zksync.io'],
+      blockExplorerUrls: ['https://explorer.zksync.io'],
+    },
   };
   
   return chainConfigs[chainId];
 }
-
-export { SOLANA_CHAIN_ID };
