@@ -1,34 +1,214 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+/* Main App Styles */
+
+/* Primary button style */
+.btn-primary {
+    height: 48px;
+    padding: 0 24px;
+    border-radius: 10px;
+    font-weight: 700;
+    background-color: #C1FF72;
+    color: #000000;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.1s ease;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+.btn-primary:hover {
+    opacity: 0.9;
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Secondary button style */
+.btn-secondary {
+    height: 48px;
+    padding: 0 24px;
+    border-radius: 10px;
+    font-weight: 700;
+    background-color: transparent;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.btn-secondary:active {
+    transform: scale(0.98);
+}
+
+/* Swap card styles */
+.swap-card {
+    background-color: #000000;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 10px;
+    padding: 24px;
+    box-shadow: 0 0 40px rgba(193, 255, 114, 0.05);
+    max-width: 480px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+/* Input styles */
+.swap-input {
+    height: 56px;
+    background-color: #111111;
+    border: none;
+    border-radius: 10px;
+    color: #ffffff;
+    font-size: 18px;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 0 16px;
+    width: 100%;
+    transition: box-shadow 0.2s ease;
+}
+
+.swap-input::placeholder {
+    color: #666666;
+}
+
+.swap-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 1px #C1FF72;
+}
+
+/* Token selector button */
+.token-selector {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: #111111;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.token-selector:hover {
+    border-color: rgba(255, 255, 255, 0.4);
+    background-color: #1a1a1a;
+}
+
+/* Status badges */
+.status-pending {
+    background-color: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+}
+
+.status-success {
+    background-color: rgba(193, 255, 114, 0.2);
+    color: #C1FF72;
+}
+
+.status-failed {
+    background-color: rgba(231, 76, 60, 0.2);
+    color: #E74C3C;
+}
+
+/* Chain icon styles */
+.chain-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: #222222;
+    display: flex;
     align-items: center;
     justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
 }
 
-.App-link {
-    color: #61dafb;
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .swap-card {
+        padding: 16px;
+        border-radius: 10px;
+    }
+    
+    .swap-input {
+        height: 48px;
+        font-size: 16px;
+    }
+    
+    .btn-primary,
+    .btn-secondary {
+        height: 44px;
+    }
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
+/* Skeleton loading */
+.skeleton {
+    background: linear-gradient(90deg, #1a1a1a 25%, #222222 50%, #1a1a1a 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
     }
-    to {
-        transform: rotate(360deg);
+    100% {
+        background-position: -200% 0;
     }
+}
+
+/* Modal overlay */
+.modal-overlay {
+    background-color: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+}
+
+/* Swap arrow button */
+.swap-arrow-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background-color: #111111;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.swap-arrow-btn:hover {
+    background-color: #1a1a1a;
+    border-color: #C1FF72;
+}
+
+.swap-arrow-btn:hover svg {
+    color: #C1FF72;
+}
+
+/* Route info card */
+.route-info {
+    background-color: #0a0a0a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 16px;
+}
+
+/* Transaction history row */
+.tx-row {
+    padding: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    transition: background-color 0.15s ease;
+}
+
+.tx-row:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.tx-row:last-child {
+    border-bottom: none;
 }
