@@ -7,127 +7,144 @@ import {
   DialogTitle,
 } from './ui/dialog';
 import { Button } from './ui/button';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
+
+const WalletOption = memo(({ 
+  name, 
+  description, 
+  logoUrl, 
+  onClick, 
+  isConnecting, 
+  disabled,
+  testId 
+}) => (
+  <Button
+    onClick={onClick}
+    disabled={disabled}
+    className="w-full h-14 rounded-[10px] bg-[#111] border border-white/10 hover:border-white/30 hover:bg-[#1a1a1a] text-white justify-start gap-4 transition-colors"
+    variant="ghost"
+    data-testid={testId}
+  >
+    {isConnecting ? (
+      <Loader2 className="w-8 h-8 animate-spin" />
+    ) : logoUrl ? (
+      <img src={logoUrl} alt={name} className="w-8 h-8 rounded-lg" onError={(e) => { e.target.style.display = 'none'; }} />
+    ) : (
+      <div className="w-8 h-8 rounded-lg bg-[#333] flex items-center justify-center">
+        <Wallet className="w-5 h-5 text-white" />
+      </div>
+    )}
+    <div className="flex flex-col items-start">
+      <span className="font-semibold text-sm sm:text-base">{name}</span>
+      <span className="text-xs text-gray-500">{description}</span>
+    </div>
+  </Button>
+));
+
+WalletOption.displayName = 'WalletOption';
 
 export const WalletModal = memo(() => {
   const { 
     showWalletModal, 
     setShowWalletModal,
     connectMetaMask,
+    connectTrustWallet,
     connectPhantom,
+    connectTron,
     evmConnecting,
     solanaConnecting,
+    tronConnecting,
   } = useWalletStore();
 
   const [error, setError] = useState(null);
 
-  const handleMetaMaskConnect = useCallback(async () => {
+  const handleConnect = useCallback(async (connectFn, walletName) => {
     setError(null);
     try {
-      await connectMetaMask();
-      toast.success('MetaMask connected successfully');
+      await connectFn();
+      toast.success(`${walletName} connected successfully`);
       setShowWalletModal(false);
     } catch (err) {
-      console.error('MetaMask connection error:', err);
+      console.error(`${walletName} connection error:`, err);
       if (err.code === 4001) {
         setError('Connection rejected. Please try again.');
       } else if (err.message?.includes('not installed')) {
-        setError('MetaMask is not installed. Please install it first.');
+        setError(err.message);
       } else {
-        setError(err.message || 'Failed to connect MetaMask');
+        setError(err.message || `Failed to connect ${walletName}`);
       }
     }
-  }, [connectMetaMask, setShowWalletModal]);
+  }, [setShowWalletModal]);
 
-  const handlePhantomConnect = useCallback(async () => {
-    setError(null);
-    try {
-      await connectPhantom();
-      toast.success('Phantom connected successfully');
-      setShowWalletModal(false);
-    } catch (err) {
-      console.error('Phantom connection error:', err);
-      if (err.code === 4001) {
-        setError('Connection rejected. Please try again.');
-      } else if (err.message?.includes('not installed')) {
-        setError('Phantom wallet is not installed. Please install it first.');
-      } else {
-        setError(err.message || 'Failed to connect Phantom');
-      }
-    }
-  }, [connectPhantom, setShowWalletModal]);
-
-  const isConnecting = evmConnecting || solanaConnecting;
+  const isConnecting = evmConnecting || solanaConnecting || tronConnecting;
 
   return (
     <Dialog open={showWalletModal} onOpenChange={setShowWalletModal}>
-      <DialogContent className="sm:max-w-[400px] bg-[#0a0a0a] border-white/20 rounded-[10px] p-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-0">
-          <DialogTitle className="text-xl font-bold text-white">
+      <DialogContent className="w-[95vw] max-w-[400px] bg-[#0a0a0a] border-white/20 rounded-[10px] p-0 overflow-hidden">
+        <DialogHeader className="p-4 sm:p-6 pb-0">
+          <DialogTitle className="text-lg sm:text-xl font-bold text-white">
             Connect Wallet
           </DialogTitle>
-          <p className="text-sm text-gray-400 mt-2">
-            Choose your preferred wallet to connect
+          <p className="text-xs sm:text-sm text-gray-400 mt-2">
+            Choose your preferred wallet
           </p>
         </DialogHeader>
 
-        <div className="p-6 space-y-3">
+        <div className="p-4 sm:p-6 space-y-2 sm:space-y-3">
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-[#E74C3C]/10 border border-[#E74C3C]/20 rounded-[10px] text-[#E74C3C] text-sm">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <div className="flex items-start gap-2 p-3 bg-[#E74C3C]/10 border border-[#E74C3C]/20 rounded-[10px] text-[#E74C3C] text-xs sm:text-sm">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
           {/* MetaMask */}
-          <Button
-            onClick={handleMetaMaskConnect}
+          <WalletOption
+            name="MetaMask"
+            description="Popular browser wallet"
+            logoUrl="https://raw.githubusercontent.com/MetaMask/brand-resources/master/SVG/SVG_MetaMask_Icon_Color.svg"
+            onClick={() => handleConnect(connectMetaMask, 'MetaMask')}
+            isConnecting={evmConnecting}
             disabled={isConnecting}
-            className="w-full h-14 rounded-[10px] bg-[#111] border border-white/10 hover:border-white/30 hover:bg-[#1a1a1a] text-white justify-start gap-4 transition-colors"
-            variant="ghost"
-            data-testid="metamask-connect-btn"
-          >
-            {evmConnecting ? (
-              <Loader2 className="w-8 h-8 animate-spin text-[#F6851B]" />
-            ) : (
-              <img 
-                src="https://raw.githubusercontent.com/MetaMask/brand-resources/master/SVG/SVG_MetaMask_Icon_Color.svg"
-                alt="MetaMask"
-                className="w-8 h-8"
-              />
-            )}
-            <div className="flex flex-col items-start">
-              <span className="font-semibold">MetaMask</span>
-              <span className="text-xs text-gray-500">EVM Chains</span>
-            </div>
-          </Button>
+            testId="metamask-connect-btn"
+          />
+
+          {/* Trust Wallet */}
+          <WalletOption
+            name="Trust Wallet"
+            description="Multi-chain mobile wallet"
+            logoUrl="https://trustwallet.com/assets/images/media/assets/TWT.svg"
+            onClick={() => handleConnect(connectTrustWallet, 'Trust Wallet')}
+            isConnecting={evmConnecting}
+            disabled={isConnecting}
+            testId="trustwallet-connect-btn"
+          />
 
           {/* Phantom */}
-          <Button
-            onClick={handlePhantomConnect}
+          <WalletOption
+            name="Phantom"
+            description="Solana wallet"
+            logoUrl="https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/solana.svg"
+            onClick={() => handleConnect(connectPhantom, 'Phantom')}
+            isConnecting={solanaConnecting}
             disabled={isConnecting}
-            className="w-full h-14 rounded-[10px] bg-[#111] border border-white/10 hover:border-white/30 hover:bg-[#1a1a1a] text-white justify-start gap-4 transition-colors"
-            variant="ghost"
-            data-testid="phantom-connect-btn"
-          >
-            {solanaConnecting ? (
-              <Loader2 className="w-8 h-8 animate-spin text-[#AB9FF2]" />
-            ) : (
-              <img 
-                src="https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/solana.svg"
-                alt="Phantom"
-                className="w-8 h-8"
-              />
-            )}
-            <div className="flex flex-col items-start">
-              <span className="font-semibold">Phantom</span>
-              <span className="text-xs text-gray-500">Solana</span>
-            </div>
-          </Button>
+            testId="phantom-connect-btn"
+          />
 
-          <p className="text-xs text-gray-500 text-center pt-2">
-            By connecting a wallet, you agree to our Terms of Service
+          {/* TronLink */}
+          <WalletOption
+            name="TronLink"
+            description="Tron wallet"
+            logoUrl="https://cryptologos.cc/logos/tron-trx-logo.svg"
+            onClick={() => handleConnect(connectTron, 'TronLink')}
+            isConnecting={tronConnecting}
+            disabled={isConnecting}
+            testId="tronlink-connect-btn"
+          />
+
+          <p className="text-[10px] sm:text-xs text-gray-500 text-center pt-2">
+            By connecting, you agree to our Terms of Service
           </p>
         </div>
       </DialogContent>
