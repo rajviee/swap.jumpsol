@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { useWalletStore } from '../store/walletStore';
 import {
   Dialog,
@@ -9,9 +9,8 @@ import {
 import { Button } from './ui/button';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { SiEthereum } from 'react-icons/si';
 
-export const WalletModal = () => {
+export const WalletModal = memo(() => {
   const { 
     showWalletModal, 
     setShowWalletModal,
@@ -23,7 +22,7 @@ export const WalletModal = () => {
 
   const [error, setError] = useState(null);
 
-  const handleMetaMaskConnect = async () => {
+  const handleMetaMaskConnect = useCallback(async () => {
     setError(null);
     try {
       await connectMetaMask();
@@ -39,9 +38,9 @@ export const WalletModal = () => {
         setError(err.message || 'Failed to connect MetaMask');
       }
     }
-  };
+  }, [connectMetaMask, setShowWalletModal]);
 
-  const handlePhantomConnect = async () => {
+  const handlePhantomConnect = useCallback(async () => {
     setError(null);
     try {
       await connectPhantom();
@@ -57,7 +56,7 @@ export const WalletModal = () => {
         setError(err.message || 'Failed to connect Phantom');
       }
     }
-  };
+  }, [connectPhantom, setShowWalletModal]);
 
   const isConnecting = evmConnecting || solanaConnecting;
 
@@ -92,9 +91,11 @@ export const WalletModal = () => {
             {evmConnecting ? (
               <Loader2 className="w-8 h-8 animate-spin text-[#F6851B]" />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-[#F6851B] flex items-center justify-center">
-                <SiEthereum className="w-5 h-5 text-white" />
-              </div>
+              <img 
+                src="https://raw.githubusercontent.com/MetaMask/brand-resources/master/SVG/SVG_MetaMask_Icon_Color.svg"
+                alt="MetaMask"
+                className="w-8 h-8"
+              />
             )}
             <div className="flex flex-col items-start">
               <span className="font-semibold">MetaMask</span>
@@ -113,14 +114,11 @@ export const WalletModal = () => {
             {solanaConnecting ? (
               <Loader2 className="w-8 h-8 animate-spin text-[#AB9FF2]" />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#AB9FF2] to-[#534BB1] flex items-center justify-center">
-                <svg viewBox="0 0 128 128" className="w-5 h-5">
-                  <path
-                    fill="white"
-                    d="M110.584 77.897c-2.762-1.584-6.356-0.633-8.025 2.123l-0.002 0.003c-0.033 0.054-0.065 0.108-0.097 0.163-5.044 8.58-11.549 12.085-19.926 12.085-12.202 0-17.954-8.326-17.954-17.951 0-16.165 12.876-29.361 28.671-29.361 7.379 0 14.163 2.861 19.134 7.598 2.309 2.201 5.971 2.097 8.172-0.212 2.201-2.309 2.097-5.971-0.212-8.172-7.195-6.856-16.957-11.014-27.094-11.014-22.859 0-40.471 18.612-40.471 42.161 0 19.177 12.927 29.751 29.754 29.751 13.569 0 22.879-6.167 30.089-18.539 1.67-2.869 0.701-6.548-2.039-8.635z"
-                  />
-                </svg>
-              </div>
+              <img 
+                src="https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/solana.svg"
+                alt="Phantom"
+                className="w-8 h-8"
+              />
             )}
             <div className="flex flex-col items-start">
               <span className="font-semibold">Phantom</span>
@@ -135,4 +133,6 @@ export const WalletModal = () => {
       </DialogContent>
     </Dialog>
   );
-};
+});
+
+WalletModal.displayName = 'WalletModal';
