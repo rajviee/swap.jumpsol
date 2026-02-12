@@ -14,6 +14,7 @@ import { CHAIN_INFO, POPULAR_CHAIN_IDS, formatTokenAmount, SOLANA_CHAIN_ID, FALL
 // Memoized token row component to prevent unnecessary re-renders
 const TokenRow = memo(({ token, chainId, isSelected, onSelect, balance, getChainInfo }) => {
   const chainInfo = getChainInfo(chainId);
+  const [imgError, setImgError] = useState(false);
   
   return (
     <button
@@ -25,24 +26,19 @@ const TokenRow = memo(({ token, chainId, isSelected, onSelect, balance, getChain
     >
       {/* Token Icon */}
       <div className="relative flex-shrink-0">
-        {token.logoURI ? (
+        {token.logoURI && !imgError ? (
           <img 
             src={token.logoURI} 
             alt={token.symbol}
             className="w-10 h-10 rounded-full bg-[#222]"
             loading="lazy"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.style.display = 'none';
-              e.target.nextSibling.style.display = 'flex';
-            }}
+            onError={() => setImgError(true)}
           />
-        ) : null}
-        <div 
-          className={`w-10 h-10 rounded-full bg-[#222] items-center justify-center text-white font-bold text-sm ${token.logoURI ? 'hidden' : 'flex'}`}
-        >
-          {token.symbol?.charAt(0) || '?'}
-        </div>
+        ) : (
+          <div className="w-10 h-10 rounded-full bg-[#222] flex items-center justify-center text-white font-bold text-sm">
+            {token.symbol?.charAt(0) || '?'}
+          </div>
+        )}
         {/* Chain indicator */}
         {chainInfo.logoURI ? (
           <img 
