@@ -161,11 +161,19 @@ export const TokenSelectModal = memo(({
 
   // Get tokens for active chain with fallback for Solana
   const chainTokens = useMemo(() => {
+    // Debug logging
+    console.log('[TokenModal] activeChainId:', activeChainId, 'type:', typeof activeChainId);
+    console.log('[TokenModal] token keys:', Object.keys(tokens));
+    console.log('[TokenModal] tokens[activeChainId]:', tokens[activeChainId]?.length || 0);
+    
     // Handle both string and number keys (API returns string keys)
     let tokenList = tokens[activeChainId] || tokens[String(activeChainId)] || [];
     
+    console.log('[TokenModal] tokenList length:', tokenList.length);
+    
     // Use fallback tokens for Solana if empty
     if ((activeChainId === SOLANA_CHAIN_ID || String(activeChainId) === String(SOLANA_CHAIN_ID)) && tokenList.length === 0) {
+      console.log('[TokenModal] Using fallback Solana tokens');
       tokenList = FALLBACK_SOLANA_TOKENS;
     }
     
