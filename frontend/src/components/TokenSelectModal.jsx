@@ -1,119 +1,70 @@
 import { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from './ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { Skeleton } from './ui/skeleton';
 import { Search, X, Check, AlertTriangle } from 'lucide-react';
-import { CHAIN_INFO, POPULAR_CHAIN_IDS, formatTokenAmount, SOLANA_CHAIN_ID, TRON_CHAIN_ID, BITCOIN_CHAIN_ID, FALLBACK_SOLANA_TOKENS, FALLBACK_TRON_TOKENS, FALLBACK_BITCOIN_TOKENS, isChainSupported } from '../hooks/useLifi';
+import { CHAIN_INFO, PRIORITY_CHAINS, FALLBACK_TOKENS, isSwapSupported, formatTokenAmount, SOLANA_CHAIN_ID, TRON_CHAIN_ID, BITCOIN_CHAIN_ID } from '../hooks/useLifi';
 
-// Memoized token row component
-const TokenRow = memo(({ token, chainId, isSelected, onSelect, balance, chainInfo, isUnsupported }) => {
-  const [imgError, setImgError] = useState(false);
+// Token Row - memoized for performance
+const TokenRow = memo(({ token, chainId, isSelected, onSelect, chainInfo, unsupported }) => {
+  const [imgErr, setImgErr] = useState(false);
+  const logo = token.logoURI || token.logo;
   
   return (
     <button
       onClick={() => onSelect(token)}
-      className={`w-full flex items-center gap-3 p-3 rounded-[10px] token-row token-list-item ${
-        isSelected ? 'bg-[#C1FF72]/10 border border-[#C1FF72]/30' : ''
-      } ${isUnsupported ? 'opacity-60' : ''}`}
-      data-testid={`token-option-${token.symbol}`}
+      className={`w-full flex items-center gap-3 p-2.5 sm:p-3 rounded-lg token-row ${isSelected ? 'bg-[#C1FF72]/10 ring-1 ring-[#C1FF72]/40' : ''} ${unsupported ? 'opacity-60' : ''}`}
+      data-testid={`token-${token.symbol}`}
     >
       <div className="relative flex-shrink-0">
-        {token.logoURI && !imgError ? (
-          <img 
-            src={token.logoURI} 
-            alt={token.symbol}
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#222]"
-            loading="lazy"
-            onError={() => setImgError(true)}
-          />
+        {logo && !imgErr ? (
+          <img src={logo} alt="" className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#222]" onError={() => setImgErr(true)} loading="lazy" />
         ) : (
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#222] flex items-center justify-center text-white font-bold text-sm">
-            {token.symbol?.charAt(0) || '?'}
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#333] flex items-center justify-center text-white font-bold text-sm">
+            {token.symbol?.[0] || '?'}
           </div>
         )}
-        {chainInfo?.logoURI ? (
-          <img 
-            src={chainInfo.logoURI}
-            alt={chainInfo.name}
-            className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[#0a0a0a]"
-            onError={(e) => { e.target.style.display = 'none'; }}
-          />
-        ) : (
-          <div 
-            className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[#0a0a0a] text-[6px] font-bold flex items-center justify-center"
-            style={{ backgroundColor: chainInfo?.color || '#666' }}
-          >
-            {chainInfo?.symbol?.charAt(0) || '?'}
-          </div>
+        {chainInfo?.logo && (
+          <img src={chainInfo.logo} alt="" className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border border-[#0a0a0a]" />
         )}
       </div>
-
-      <div className="flex-1 text-left min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-white truncate text-sm sm:text-base">{token.symbol}</span>
-          {isSelected && <Check className="w-4 h-4 text-[#C1FF72] flex-shrink-0" />}
-          {isUnsupported && <AlertTriangle className="w-3 h-3 text-yellow-500 flex-shrink-0" />}
+      <div className="flex-1 min-w-0 text-left">
+        <div className="flex items-center gap-1.5">
+          <span className="font-semibold text-white text-sm truncate">{token.symbol}</span>
+          {isSelected && <Check className="w-3.5 h-3.5 text-[#C1FF72]" />}
+          {unsupported && <AlertTriangle className="w-3 h-3 text-yellow-500" />}
         </div>
-        <span className="text-xs text-gray-500 truncate block">{token.name}</span>
+        <div className="text-xs text-gray-500 truncate">{token.name}</div>
       </div>
-
-      {balance !== undefined && (
-        <div className="text-right flex-shrink-0">
-          <div className="text-xs sm:text-sm font-mono text-white">
-            {formatTokenAmount(balance, token.decimals, 4)}
-          </div>
-          <div className="text-xs text-gray-500">Balance</div>
-        </div>
-      )}
     </button>
   );
 });
-
 TokenRow.displayName = 'TokenRow';
 
-// Memoized chain filter button
-const ChainFilterButton = memo(({ chain, isActive, onClick, chainInfo, isUnsupported }) => {
-  const [imgError, setImgError] = useState(false);
+// Chain Button - memoized
+const ChainBtn = memo(({ chain, active, onClick, info, unsupported }) => {
+  const [imgErr, setImgErr] = useState(false);
   
   return (
     <button
       onClick={onClick}
-      className={`chain-filter-btn flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-[10px] text-xs font-medium transition-colors ${
-        isActive 
-          ? 'bg-[#C1FF72] text-black' 
-          : 'bg-[#111] text-gray-400 hover:bg-[#1a1a1a] hover:text-white'
-      } ${isUnsupported && !isActive ? 'border border-dashed border-gray-600' : ''}`}
-      data-testid={`chain-filter-${chain.id}`}
-      title={isUnsupported ? 'Coming soon' : chain.name}
+      className={`chain-btn flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+        active ? 'bg-[#C1FF72] text-black' : 'bg-[#111] text-gray-400 hover:bg-[#1a1a1a] hover:text-white'
+      } ${unsupported && !active ? 'border border-dashed border-gray-600' : ''}`}
+      data-testid={`chain-${chain.id}`}
     >
-      {chainInfo?.logoURI && !imgError ? (
-        <img 
-          src={chainInfo.logoURI} 
-          alt={chain.name} 
-          className="w-4 h-4 rounded-full"
-          onError={() => setImgError(true)}
-        />
+      {info?.logo && !imgErr ? (
+        <img src={info.logo} alt="" className="w-4 h-4 rounded-full" onError={() => setImgErr(true)} />
       ) : (
-        <div 
-          className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white"
-          style={{ backgroundColor: chainInfo?.color || '#666' }}
-        >
-          {chainInfo?.symbol?.charAt(0) || '?'}
-        </div>
+        <div className="w-4 h-4 rounded-full" style={{ background: info?.color || '#666' }} />
       )}
-      <span className="hidden sm:inline">{chain.name}</span>
-      <span className="sm:hidden">{chain.name?.slice(0, 3)}</span>
+      <span className="hidden xs:inline">{chain.name}</span>
+      <span className="xs:hidden">{(chain.name || '').slice(0, 4)}</span>
     </button>
   );
 });
-
-ChainFilterButton.displayName = 'ChainFilterButton';
+ChainBtn.displayName = 'ChainBtn';
 
 export const TokenSelectModal = memo(({
   open,
@@ -125,245 +76,177 @@ export const TokenSelectModal = memo(({
   selectedToken,
   title = 'Select Token',
   loading = false,
-  walletBalances = {},
-  defaultToSolana = false,
+  defaultChainId,
 }) => {
   const [search, setSearch] = useState('');
-  const scrollContainerRef = useRef(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [scrollLeft, setScrollLeft] = useState(0);
-  
-  // Compute initial chain ID
-  const getInitialChainId = useCallback(() => {
-    if (defaultToSolana && chains.some(c => c.id === SOLANA_CHAIN_ID)) {
-      return SOLANA_CHAIN_ID;
-    }
-    return selectedChainId || chains[0]?.id || 1;
-  }, [defaultToSolana, chains, selectedChainId]);
-  
-  const [activeChainId, setActiveChainId] = useState(() => getInitialChainId());
+  const [activeChain, setActiveChain] = useState(defaultChainId || selectedChainId || 1);
+  const scrollRef = useRef(null);
+  const [dragging, setDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, scroll: 0 });
 
-  // Reset state when modal opens
+  // Reset on open
   useEffect(() => {
     if (open) {
       setSearch('');
-      setActiveChainId(getInitialChainId());
+      setActiveChain(defaultChainId || selectedChainId || chains[0]?.id || 1);
     }
-  }, [open, getInitialChainId]);
+  }, [open, defaultChainId, selectedChainId, chains]);
 
-  // Get popular chains first
+  // Sorted chains
   const sortedChains = useMemo(() => {
-    const popular = chains.filter(c => POPULAR_CHAIN_IDS.includes(c.id));
-    const others = chains.filter(c => !POPULAR_CHAIN_IDS.includes(c.id));
-    
-    // Sort popular chains by POPULAR_CHAIN_IDS order
-    popular.sort((a, b) => POPULAR_CHAIN_IDS.indexOf(a.id) - POPULAR_CHAIN_IDS.indexOf(b.id));
-    
-    return [...popular, ...others];
+    const priority = chains.filter(c => PRIORITY_CHAINS.includes(c.id));
+    const others = chains.filter(c => !PRIORITY_CHAINS.includes(c.id));
+    priority.sort((a, b) => PRIORITY_CHAINS.indexOf(a.id) - PRIORITY_CHAINS.indexOf(b.id));
+    return [...priority, ...others];
   }, [chains]);
 
-  // Get tokens for active chain with fallbacks
+  // Tokens for active chain
   const chainTokens = useMemo(() => {
-    let tokenList = tokens[activeChainId] || [];
-    
-    // Use fallback tokens if empty
-    if (tokenList.length === 0) {
-      if (activeChainId === SOLANA_CHAIN_ID) {
-        tokenList = FALLBACK_SOLANA_TOKENS;
-      } else if (activeChainId === TRON_CHAIN_ID) {
-        tokenList = FALLBACK_TRON_TOKENS;
-      } else if (activeChainId === BITCOIN_CHAIN_ID) {
-        tokenList = FALLBACK_BITCOIN_TOKENS;
-      }
+    let list = tokens[activeChain] || [];
+    if (list.length === 0 && FALLBACK_TOKENS[activeChain]) {
+      list = FALLBACK_TOKENS[activeChain];
     }
     
-    // Filter by search
     if (search) {
-      const searchLower = search.toLowerCase();
-      return tokenList.filter(t => 
-        t.symbol?.toLowerCase().includes(searchLower) ||
-        t.name?.toLowerCase().includes(searchLower) ||
-        t.address?.toLowerCase() === searchLower
+      const s = search.toLowerCase();
+      list = list.filter(t => 
+        t.symbol?.toLowerCase().includes(s) ||
+        t.name?.toLowerCase().includes(s) ||
+        t.address?.toLowerCase() === s
       );
     }
     
-    return tokenList;
-  }, [tokens, activeChainId, search]);
+    return list;
+  }, [tokens, activeChain, search]);
 
-  // Sort tokens
-  const sortedTokens = useMemo(() => {
-    return [...chainTokens].sort((a, b) => {
-      const balanceA = walletBalances[a.address] || 0;
-      const balanceB = walletBalances[b.address] || 0;
-      if (balanceB !== balanceA) return balanceB - balanceA;
+  // Sort: native first, then alphabetical (limited for perf)
+  const displayTokens = useMemo(() => {
+    const sorted = [...chainTokens].sort((a, b) => {
       if (a.isNative) return -1;
       if (b.isNative) return 1;
-      if (a.symbol === 'SOL' || a.symbol === 'ETH' || a.symbol === 'TRX' || a.symbol === 'BTC') return -1;
-      if (b.symbol === 'SOL' || b.symbol === 'ETH' || b.symbol === 'TRX' || b.symbol === 'BTC') return 1;
+      const nativeSymbols = ['ETH', 'SOL', 'TRX', 'BTC', 'BNB', 'MATIC', 'AVAX'];
+      if (nativeSymbols.includes(a.symbol) && !nativeSymbols.includes(b.symbol)) return -1;
+      if (nativeSymbols.includes(b.symbol) && !nativeSymbols.includes(a.symbol)) return 1;
       return (a.symbol || '').localeCompare(b.symbol || '');
     });
-  }, [chainTokens, walletBalances]);
+    return sorted.slice(0, 100); // Limit for performance
+  }, [chainTokens]);
 
-  // Limit displayed tokens for performance
-  const displayedTokens = useMemo(() => sortedTokens.slice(0, 50), [sortedTokens]);
-
-  const handleSelectToken = useCallback((token) => {
-    onSelect({ ...token, chainId: activeChainId });
+  const handleSelect = useCallback((token) => {
+    onSelect({ ...token, chainId: activeChain });
     onClose();
-  }, [activeChainId, onSelect, onClose]);
+  }, [activeChain, onSelect, onClose]);
 
-  const getChainInfo = useCallback((chainId) => {
-    return CHAIN_INFO[chainId] || { name: `Chain ${chainId}`, symbol: '?', color: '#666' };
-  }, []);
+  const isSelected = useCallback((token) => {
+    return selectedToken?.address?.toLowerCase() === token.address?.toLowerCase() && selectedToken?.chainId === activeChain;
+  }, [selectedToken, activeChain]);
 
-  const isTokenSelected = useCallback((token) => {
-    return selectedToken?.address?.toLowerCase() === token.address?.toLowerCase() &&
-           selectedToken?.chainId === activeChainId;
-  }, [selectedToken, activeChainId]);
+  const chainInfo = useCallback((id) => CHAIN_INFO[id] || {}, []);
+  const unsupported = !isSwapSupported(activeChain);
 
-  // Drag scroll handlers for chain selector
-  const handleMouseDown = useCallback((e) => {
-    if (!scrollContainerRef.current) return;
-    setIsDragging(true);
-    setStartX(e.pageX - scrollContainerRef.current.offsetLeft);
-    setScrollLeft(scrollContainerRef.current.scrollLeft);
-  }, []);
-
-  const handleMouseMove = useCallback((e) => {
-    if (!isDragging || !scrollContainerRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - scrollContainerRef.current.offsetLeft;
-    const walk = (x - startX) * 1.5;
-    scrollContainerRef.current.scrollLeft = scrollLeft - walk;
-  }, [isDragging, startX, scrollLeft]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  const handleTouchStart = useCallback((e) => {
-    if (!scrollContainerRef.current) return;
-    setStartX(e.touches[0].pageX - scrollContainerRef.current.offsetLeft);
-    setScrollLeft(scrollContainerRef.current.scrollLeft);
-  }, []);
-
-  const handleTouchMove = useCallback((e) => {
-    if (!scrollContainerRef.current) return;
-    const x = e.touches[0].pageX - scrollContainerRef.current.offsetLeft;
-    const walk = (x - startX) * 1.5;
-    scrollContainerRef.current.scrollLeft = scrollLeft - walk;
-  }, [startX, scrollLeft]);
-
-  const isActiveChainSupported = isChainSupported(activeChainId);
+  // Drag scroll handlers
+  const onMouseDown = (e) => {
+    if (!scrollRef.current) return;
+    setDragging(true);
+    setDragStart({ x: e.pageX, scroll: scrollRef.current.scrollLeft });
+  };
+  const onMouseMove = (e) => {
+    if (!dragging || !scrollRef.current) return;
+    const dx = e.pageX - dragStart.x;
+    scrollRef.current.scrollLeft = dragStart.scroll - dx;
+  };
+  const onMouseUp = () => setDragging(false);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] max-w-[480px] max-h-[90vh] sm:max-h-[85vh] bg-[#0a0a0a] border-white/20 rounded-[10px] p-0 overflow-hidden flex flex-col">
-        <DialogHeader className="p-3 sm:p-4 pb-0 border-b border-white/10 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-base sm:text-lg font-bold text-white">
-              {title}
-            </DialogTitle>
-            <button 
-              onClick={onClose}
-              className="w-8 h-8 rounded-[10px] flex items-center justify-center hover:bg-white/5 transition-colors"
-              data-testid="close-token-modal"
-            >
+      <DialogContent className="w-[95vw] max-w-[420px] h-auto max-h-[85vh] bg-[#0a0a0a] border-white/20 rounded-xl p-0 flex flex-col overflow-hidden">
+        <DialogHeader className="p-3 sm:p-4 border-b border-white/10 flex-shrink-0">
+          <div className="flex items-center justify-between mb-3">
+            <DialogTitle className="text-base font-bold text-white">{title}</DialogTitle>
+            <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/5" data-testid="close-modal">
               <X className="w-4 h-4 text-gray-400" />
             </button>
           </div>
-
-          {/* Search Input */}
-          <div className="relative mt-3 sm:mt-4 mb-2 sm:mb-3">
+          
+          {/* Search */}
+          <div className="relative mb-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search name or address"
-              className="h-10 sm:h-11 pl-10 bg-[#111] border-none rounded-[10px] text-white text-sm placeholder:text-gray-600 focus-visible:ring-1 focus-visible:ring-[#C1FF72]"
-              data-testid="token-search-input"
+              placeholder="Search tokens..."
+              className="h-9 pl-9 bg-[#111] border-none rounded-lg text-sm placeholder:text-gray-600"
+              data-testid="token-search"
             />
           </div>
-
-          {/* Chain Filter with drag scroll */}
-          <div className="chain-scroll-container pb-2 sm:pb-3">
-            <div 
-              ref={scrollContainerRef}
+          
+          {/* Chain scroll */}
+          <div className="chain-scroll-wrapper">
+            <div
+              ref={scrollRef}
               className="chain-scroll"
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
+              onMouseDown={onMouseDown}
+              onMouseMove={onMouseMove}
+              onMouseUp={onMouseUp}
+              onMouseLeave={onMouseUp}
             >
-              {sortedChains.slice(0, 12).map((chain) => {
-                const info = getChainInfo(chain.id);
-                const isActive = activeChainId === chain.id;
-                const isUnsupported = !isChainSupported(chain.id);
-                return (
-                  <ChainFilterButton
-                    key={chain.id}
-                    chain={chain}
-                    isActive={isActive}
-                    onClick={() => setActiveChainId(chain.id)}
-                    chainInfo={info}
-                    isUnsupported={isUnsupported}
-                  />
-                );
-              })}
+              {sortedChains.slice(0, 12).map(c => (
+                <ChainBtn
+                  key={c.id}
+                  chain={c}
+                  active={activeChain === c.id}
+                  onClick={() => setActiveChain(c.id)}
+                  info={chainInfo(c.id)}
+                  unsupported={!isSwapSupported(c.id)}
+                />
+              ))}
             </div>
           </div>
         </DialogHeader>
 
-        {/* Unsupported chain warning */}
-        {!isActiveChainSupported && (
-          <div className="mx-3 sm:mx-4 mt-2 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-[10px] flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0" />
-            <span className="text-xs text-yellow-500">
-              {activeChainId === TRON_CHAIN_ID ? 'Tron' : 'Bitcoin'} swaps coming soon
-            </span>
+        {/* Unsupported warning */}
+        {unsupported && (
+          <div className="mx-3 sm:mx-4 mt-2 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-yellow-500" />
+            <span className="text-xs text-yellow-500">{chainInfo(activeChain).name} swaps coming soon</span>
           </div>
         )}
 
-        {/* Token List */}
+        {/* Token list */}
         <ScrollArea className="flex-1 min-h-0">
-          <div className="p-2 token-list-container">
+          <div className="p-2">
             {loading ? (
-              Array.from({ length: 5 }).map((_, i) => (
+              Array(5).fill(0).map((_, i) => (
                 <div key={i} className="flex items-center gap-3 p-3">
-                  <Skeleton className="w-10 h-10 rounded-full bg-[#222]" />
+                  <Skeleton className="w-9 h-9 rounded-full bg-[#222]" />
                   <div className="flex-1">
-                    <Skeleton className="h-4 w-20 mb-1 bg-[#222]" />
-                    <Skeleton className="h-3 w-32 bg-[#222]" />
+                    <Skeleton className="h-4 w-16 mb-1 bg-[#222]" />
+                    <Skeleton className="h-3 w-24 bg-[#222]" />
                   </div>
                 </div>
               ))
-            ) : displayedTokens.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                <Search className="w-10 h-10 mb-3 opacity-50" />
+            ) : displayTokens.length === 0 ? (
+              <div className="py-12 text-center text-gray-500">
+                <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No tokens found</p>
-                <p className="text-xs mt-1">Try a different search</p>
               </div>
             ) : (
-              displayedTokens.map((token) => (
+              displayTokens.map(t => (
                 <TokenRow
-                  key={`${activeChainId}-${token.address}`}
-                  token={token}
-                  chainId={activeChainId}
-                  isSelected={isTokenSelected(token)}
-                  onSelect={handleSelectToken}
-                  balance={walletBalances[token.address]}
-                  chainInfo={getChainInfo(activeChainId)}
-                  isUnsupported={!isActiveChainSupported}
+                  key={`${activeChain}-${t.address}`}
+                  token={t}
+                  chainId={activeChain}
+                  isSelected={isSelected(t)}
+                  onSelect={handleSelect}
+                  chainInfo={chainInfo(activeChain)}
+                  unsupported={unsupported}
                 />
               ))
             )}
-            {sortedTokens.length > 50 && (
-              <div className="text-center text-xs text-gray-500 py-3">
-                Showing 50 of {sortedTokens.length} tokens. Use search to find more.
-              </div>
+            {chainTokens.length > 100 && (
+              <p className="text-center text-xs text-gray-500 py-2">
+                Showing 100 of {chainTokens.length}. Use search.
+              </p>
             )}
           </div>
         </ScrollArea>
@@ -371,5 +254,4 @@ export const TokenSelectModal = memo(({
     </Dialog>
   );
 });
-
 TokenSelectModal.displayName = 'TokenSelectModal';
