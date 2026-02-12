@@ -1,0 +1,148 @@
+{
+  "design_system": {
+    "identity": {
+      "name": "Rhino.fi-style Cross-Chain Swap",
+      "archetype": "Electric & Neon (Disciplined)",
+      "vibe": "Professional, High-Speed, Secure, Minimalist DeFi",
+      "inspiration": ["jumpsol.xyz", "Rhino.fi"]
+    },
+    "typography": {
+      "font_family": {
+        "headings": "Chivo, sans-serif",
+        "body": "Inter, sans-serif",
+        "mono": "JetBrains Mono, monospace"
+      },
+      "scale": {
+        "h1": "text-4xl md:text-5xl font-black tracking-tight",
+        "h2": "text-3xl font-bold tracking-tight",
+        "h3": "text-2xl font-bold",
+        "body_lg": "text-lg leading-relaxed",
+        "body_base": "text-base leading-relaxed",
+        "caption": "text-sm text-muted-foreground",
+        "label": "text-xs font-bold uppercase tracking-widest text-muted-foreground"
+      }
+    },
+    "colors": {
+      "palette": {
+        "background": "#000000",
+        "surface": "#0A0A0A",
+        "surface_highlight": "#111111",
+        "primary": "#C1FF72",
+        "primary_foreground": "#000000",
+        "secondary": "#FFFFFF",
+        "secondary_foreground": "#000000",
+        "accent": "#C1FF72",
+        "destructive": "#E74C3C",
+        "border": "rgba(255, 255, 255, 0.5)",
+        "muted": "#333333",
+        "muted_foreground": "#888888"
+      },
+      "usage": {
+        "body_bg": "bg-[#000000]",
+        "card_bg": "bg-[#000000]",
+        "text_primary": "text-white",
+        "text_secondary": "text-gray-400",
+        "border_default": "border-white/50",
+        "primary_button": "bg-[#C1FF72] text-black hover:bg-[#b0e665]",
+        "secondary_button": "bg-transparent border border-white text-white hover:bg-white/10"
+      }
+    },
+    "spacing": {
+      "container_padding": "p-6 md:p-12",
+      "section_gap": "gap-8",
+      "element_gap": "gap-4",
+      "radius": "rounded-[10px]"
+    },
+    "layout": {
+      "grid_system": "grid grid-cols-1 md:grid-cols-12 gap-6",
+      "max_width": "max-w-7xl mx-auto",
+      "swap_card_width": "max-w-[480px] mx-auto"
+    },
+    "components": {
+      "buttons": {
+        "primary": "h-12 px-6 rounded-[10px] font-bold bg-[#C1FF72] text-black hover:opacity-90 transition-all active:scale-95",
+        "secondary": "h-12 px-6 rounded-[10px] font-bold bg-transparent border border-white text-white hover:bg-white/10 transition-all",
+        "ghost": "h-10 px-4 rounded-[10px] font-medium text-gray-400 hover:text-white hover:bg-white/5"
+      },
+      "inputs": {
+        "default": "h-14 bg-[#111111] border-none rounded-[10px] text-white placeholder:text-gray-600 focus:ring-1 focus:ring-[#C1FF72] px-4 text-lg font-mono"
+      },
+      "cards": {
+        "base": "bg-black border border-white/50 rounded-[10px] p-6 shadow-2xl shadow-[#C1FF72]/5",
+        "hover": "hover:border-[#C1FF72] transition-colors duration-300"
+      },
+      "modals": {
+        "overlay": "bg-black/80 backdrop-blur-sm",
+        "content": "bg-[#0A0A0A] border border-white/20 rounded-[10px] p-0 overflow-hidden"
+      }
+    },
+    "visual_enhancers": {
+      "glassmorphism": "backdrop-blur-xl bg-black/70 border-b border-white/10",
+      "gradients": "None. Strictly flat colors or subtle noise.",
+      "shadows": "shadow-[0_0_20px_rgba(193,255,114,0.1)]",
+      "borders": "1px solid rgba(255,255,255,0.5)"
+    },
+    "motion": {
+      "hover": "transition-all duration-200 ease-out",
+      "active": "scale-95",
+      "page_transition": "animate-in fade-in slide-in-from-bottom-4 duration-500"
+    }
+  },
+  "assets": {
+    "images": {
+      "hero_3d": "https://images.unsplash.com/photo-1666092109883-4b1f221ffa58?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwxfHxldGhlcmV1bSUyMHNvbGFuYSUyMHBvbHlnb24lMjBiaXRjb2luJTIwY3J5cHRvJTIwbG9nb3MlMjBtaW5pbWFsfGVufDB8fHx8MTc3MDg5NzMzNXww&ixlib=rb-4.1.0&q=85",
+      "background_texture": "https://images.unsplash.com/photo-1762280040702-dbe2f4869712?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGRhcmslMjBkaWdpdGFsJTIwZ3JpZCUyMGJhY2tncm91bmQlMjBtaW5pbWFsfGVufDB8fHx8MTc3MDg5NzM0N3ww&ixlib=rb-4.1.0&q=85"
+    },
+    "icons": {
+      "library": "lucide-react",
+      "wallet_icons": "Use react-icons/si (SiMetamask, SiPhantom) or similar SVG components. Do not use images for wallet icons."
+    }
+  },
+  "instructions_to_main_agent": {
+    "general": [
+      "Implement a 'Strictly Black' theme. The background must be #000000. No dark grays for the main background.",
+      "Use the accent color #C1FF72 for primary actions and success states.",
+      "Use #E74C3C for error states.",
+      "Ensure all borders are high contrast: rgba(255,255,255,0.5).",
+      "Border radius must be exactly 10px for all cards, buttons, and inputs.",
+      "The Swap Card must be centered and elevated.",
+      "Use 'Chivo' font for headings and 'Inter' for body text. Add these fonts via Google Fonts in index.html.",
+      "Do not use gradients for backgrounds. Use the provided 'background_texture' image with very low opacity (5-10%) if a texture is needed, otherwise stick to pure black."
+    ],
+    "layout_structure": [
+      "Header: Logo (Left), Navigation (Center - Optional), Wallet Connect (Right).",
+      "Main Content: Centered Swap Widget (Max width 480px).",
+      "Footer: Minimal links, social icons.",
+      "Transaction History: Can be a modal or a section below the swap card."
+    ],
+    "component_overrides": {
+      "Button": "Override Shadcn Button to use 10px radius and the specific colors defined in palette.",
+      "Card": "Override Shadcn Card to use bg-black, border-white/50, and 10px radius.",
+      "Input": "Override Shadcn Input to use bg-[#111], border-none, 10px radius, and h-14 height.",
+      "Dialog": "Ensure modals have a black background and white/20 border."
+    },
+    "wallet_integration": {
+      "phantom": "Use window.solana for Phantom connection.",
+      "metamask": "Use window.ethereum for MetaMask connection.",
+      "logic": "Implement a 'Connect Wallet' modal that allows choosing between Phantom (Solana) and MetaMask (EVM)."
+    }
+  },
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients.",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Use glass-morphism effects with backdrop filters (12-24px blur) sparingly, mainly for the header.",
+    "You MUST NOT apply universal transition. Eg: `transition: all`. This results in breaking transforms. Always add transitions for specific interactive elements like button, input excluding transforms.",
+    "You MUST NOT center align the app container, ie do not add `.App { text-align: center; }` in the css file. This disrupts the human natural reading flow of text.",
+    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style.",
+    "NEVER: use AI assistant Emoji characters like 🤖🧠💭💡🔮 for icons.",
+    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations. Static = dead.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "Subtle grain textures, noise overlays, custom cursors, selection states, and loading animations: separates good from extraordinary.",
+    "Main agent relies on these image URLs. Missing categories (especially sponsor logos) = main agent will use placeholder text which is FORBIDDEN.",
+    "Prioritize using pre-existing components from src/components/ui when applicable.",
+    "Components MUST use named exports (export const ComponentName = ...).",
+    "Pages MUST use default exports (export default function PageName() {...}).",
+    "Use `sonner` for toasts. Sonner component are located in `/app/frontend/src/components/ui/sonner.tsx`."
+  ]
+}
