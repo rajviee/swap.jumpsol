@@ -14,68 +14,48 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black">
-      {/* Header */}
+    <div className="min-h-screen bg-black overflow-x-hidden">
       <Header />
-      
-      {/* Wallet Connection Modal */}
       <WalletModal />
 
-      {/* Main Content */}
-      <main className="pt-24 pb-12 px-4 md:px-8">
+      <main className="pt-20 sm:pt-24 pb-8 sm:pb-12 px-3 sm:px-4 md:px-8">
         <div className="max-w-7xl mx-auto">
-          {/* Hero Section */}
-          <section className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-black text-white mb-4">
+          {/* Hero */}
+          <section className="text-center mb-8 sm:mb-12">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-3 sm:mb-4">
               Cross-Chain <span className="text-[#C1FF72]">Swap</span>
             </h1>
-            <p className="text-gray-400 text-lg max-w-xl mx-auto">
-              Swap tokens across multiple chains with the best rates powered by LI.FI
+            <p className="text-gray-400 text-sm sm:text-base md:text-lg max-w-xl mx-auto px-4">
+              Swap tokens across multiple chains with LI.FI
             </p>
           </section>
 
           {/* Main Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl mx-auto" id="swap">
-            {/* Swap Card */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 max-w-5xl mx-auto" id="swap">
             <div className="lg:col-span-1">
               <SwapCard onTransactionComplete={handleTransactionComplete} />
             </div>
-
-            {/* Transaction History */}
             <div className="lg:col-span-1">
               <TransactionHistory refreshTrigger={txRefreshTrigger} />
             </div>
           </div>
 
           {/* Footer */}
-          <footer className="mt-16 text-center">
-            <div className="flex items-center justify-center gap-6 text-sm text-gray-500">
-              <a 
-                href="https://li.fi" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="hover:text-white transition-colors"
-              >
+          <footer className="mt-12 sm:mt-16 text-center">
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-gray-500">
+              <a href="https://li.fi" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
                 Powered by LI.FI
               </a>
-              <span>•</span>
-              <a 
-                href="https://docs.li.fi" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="hover:text-white transition-colors"
-              >
-                Documentation
+              <span className="hidden sm:inline">•</span>
+              <a href="https://docs.li.fi" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+                Docs
               </a>
             </div>
-            <p className="text-gray-600 text-xs mt-4">
-              © 2024 CrossSwap. All rights reserved.
-            </p>
+            <p className="text-gray-600 text-[10px] sm:text-xs mt-4">© 2024 CrossSwap</p>
           </footer>
         </div>
       </main>
 
-      {/* Toast Notifications */}
       <Toaster 
         position="bottom-right"
         toastOptions={{
