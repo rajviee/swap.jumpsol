@@ -1,4 +1,4 @@
-import { useWalletStore } from '../store/walletStore';
+import { useWalletStore, SOLANA_CHAIN_ID } from '../store/walletStore';
 import { Button } from './ui/button';
 import { 
   DropdownMenu,
@@ -8,10 +8,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { Wallet, ChevronDown, Copy, ExternalLink, LogOut, Loader2 } from 'lucide-react';
+import { Wallet, ChevronDown, Copy, ExternalLink, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
+import { memo, useCallback } from 'react';
+import { CHAIN_INFO } from '../hooks/useLifi';
 
-export const Header = () => {
+export const Header = memo(() => {
   const { 
     evmConnected, 
     evmAddress, 
@@ -21,26 +23,26 @@ export const Header = () => {
     setShowWalletModal,
     disconnectEvm,
     disconnectSolana,
-    supportedEvmChains,
+    activeWalletType,
   } = useWalletStore();
 
   const isConnected = evmConnected || solanaConnected;
-  const address = evmAddress || solanaAddress;
+  const address = activeWalletType === 'solana' ? solanaAddress : (evmAddress || solanaAddress);
   
-  const truncateAddress = (addr) => {
+  const truncateAddress = useCallback((addr) => {
     if (!addr) return '';
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-  };
+  }, []);
 
-  const copyAddress = () => {
+  const copyAddress = useCallback(() => {
     if (address) {
       navigator.clipboard.writeText(address);
       toast.success('Address copied to clipboard');
     }
-  };
+  }, [address]);
 
-  const getExplorerUrl = () => {
-    if (solanaConnected) {
+  const getExplorerUrl = useCallback(() => {
+    if (activeWalletType === 'solana' || (!evmConnected && solanaConnected)) {
       return `https://solscan.io/account/${solanaAddress}`;
     }
     const explorers = {
@@ -52,27 +54,33 @@ export const Header = () => {
       43114: 'https://snowtrace.io/address/',
     };
     return `${explorers[evmChainId] || explorers[1]}${evmAddress}`;
-  };
+  }, [activeWalletType, evmConnected, solanaConnected, solanaAddress, evmChainId, evmAddress]);
 
-  const handleDisconnect = () => {
+  const handleDisconnect = useCallback(() => {
     if (evmConnected) disconnectEvm();
     if (solanaConnected) disconnectSolana();
     toast.success('Wallet disconnected');
-  };
+  }, [evmConnected, solanaConnected, disconnectEvm, disconnectSolana]);
 
-  const getWalletType = () => {
-    if (solanaConnected) return 'Phantom';
+  const getWalletType = useCallback(() => {
+    if (activeWalletType === 'solana' || (!evmConnected && solanaConnected)) return 'Phantom';
     if (evmConnected) return 'MetaMask';
     return '';
-  };
+  }, [activeWalletType, evmConnected, solanaConnected]);
 
-  const getChainName = () => {
-    if (solanaConnected) return 'Solana';
-    if (evmChainId && supportedEvmChains[evmChainId]) {
-      return supportedEvmChains[evmChainId].name;
+  const getChainName = useCallback(() => {
+    if (activeWalletType === 'solana' || (!evmConnected && solanaConnected)) {
+      return 'Solana';
     }
-    return 'Unknown';
-  };
+    return CHAIN_INFO[evmChainId]?.name || 'Unknown';
+  }, [activeWalletType, evmConnected, solanaConnected, evmChainId]);
+
+  const getChainLogo = useCallback(() => {
+    if (activeWalletType === 'solana' || (!evmConnected && solanaConnected)) {
+      return CHAIN_INFO[SOLANA_CHAIN_ID]?.logoURI;
+    }
+    return CHAIN_INFO[evmChainId]?.logoURI;
+  }, [activeWalletType, evmConnected, solanaConnected, evmChainId]);
 
   return (
     <header className="glass-header fixed top-0 left-0 right-0 z-50">
@@ -108,8 +116,12 @@ export const Header = () => {
                     className="h-10 px-4 rounded-[10px] border-white/20 bg-transparent hover:bg-white/5 text-white gap-2"
                     data-testid="wallet-menu-trigger"
                   >
-                    <div className="w-6 h-6 rounded-full bg-[#C1FF72] flex items-center justify-center">
-                      <Wallet className="w-3 h-3 text-black" />
+                    <div className="w-6 h-6 rounded-full bg-[#C1FF72] flex items-center justify-center overflow-hidden">
+                      {getChainLogo() ? (
+                        <img src={getChainLogo()} alt="" className="w-full h-full" />
+                      ) : (
+                        <Wallet className="w-3 h-3 text-black" />
+                      )}
                     </div>
                     <span className="hidden sm:block font-mono text-sm">
                       {truncateAddress(address)}
@@ -124,7 +136,12 @@ export const Header = () => {
                   <DropdownMenuLabel className="text-gray-400 font-normal">
                     <div className="flex flex-col gap-1">
                       <span className="text-white font-medium">{getWalletType()}</span>
-                      <span className="text-xs text-[#C1FF72]">{getChainName()}</span>
+                      <div className="flex items-center gap-1.5">
+                        {getChainLogo() && (
+                          <img src={getChainLogo()} alt="" className="w-3 h-3 rounded-full" />
+                        )}
+                        <span className="text-xs text-[#C1FF72]">{getChainName()}</span>
+                      </div>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator className="bg-white/10" />
@@ -170,4 +187,6 @@ export const Header = () => {
       </div>
     </header>
   );
-};
+});
+
+Header.displayName = 'Header';

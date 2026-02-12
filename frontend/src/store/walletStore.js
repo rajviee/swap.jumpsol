@@ -1,5 +1,8 @@
 import { create } from 'zustand';
 
+// Solana chain ID used by LI.FI
+const SOLANA_CHAIN_ID = 1151111081099710;
+
 const SUPPORTED_EVM_CHAINS = {
   1: { name: 'Ethereum', symbol: 'ETH', icon: 'ethereum' },
   42161: { name: 'Arbitrum', symbol: 'ETH', icon: 'arbitrum' },
@@ -10,7 +13,7 @@ const SUPPORTED_EVM_CHAINS = {
 };
 
 const SOLANA_CHAIN = {
-  id: 'SOL',
+  id: SOLANA_CHAIN_ID,
   name: 'Solana',
   symbol: 'SOL',
   icon: 'solana',
@@ -30,12 +33,16 @@ export const useWalletStore = create((set, get) => ({
   solanaConnected: false,
   solanaConnecting: false,
   
+  // Active wallet type - 'evm' | 'solana' | null
+  activeWalletType: null,
+  
   // UI State
   showWalletModal: false,
   
   // Supported chains
   supportedEvmChains: SUPPORTED_EVM_CHAINS,
   solanaChain: SOLANA_CHAIN,
+  solanaChainId: SOLANA_CHAIN_ID,
   
   // Actions
   setShowWalletModal: (show) => set({ showWalletModal: show }),
@@ -49,6 +56,7 @@ export const useWalletStore = create((set, get) => ({
     set({ evmConnecting: true });
     
     try {
+      console.log('[Wallet] Connecting MetaMask...');
       const accounts = await window.ethereum.request({ 
         method: 'eth_requestAccounts' 
       });
@@ -57,11 +65,15 @@ export const useWalletStore = create((set, get) => ({
         method: 'eth_chainId' 
       });
       
+      const parsedChainId = parseInt(chainId, 16);
+      console.log('[Wallet] MetaMask connected:', { address: accounts[0], chainId: parsedChainId });
+      
       set({
         evmAddress: accounts[0],
-        evmChainId: parseInt(chainId, 16),
+        evmChainId: parsedChainId,
         evmConnected: true,
         evmConnecting: false,
+        activeWalletType: 'evm',
       });
       
       // Setup listeners
@@ -79,17 +91,20 @@ export const useWalletStore = create((set, get) => ({
       
       return accounts[0];
     } catch (error) {
+      console.error('[Wallet] MetaMask connection error:', error);
       set({ evmConnecting: false });
       throw error;
     }
   },
   
   disconnectEvm: () => {
+    console.log('[Wallet] Disconnecting EVM wallet');
     set({
       evmAddress: null,
       evmChainId: null,
       evmBalance: null,
       evmConnected: false,
+      activeWalletType: get().solanaConnected ? 'solana' : null,
     });
   },
   
@@ -133,13 +148,17 @@ export const useWalletStore = create((set, get) => ({
     set({ solanaConnecting: true });
     
     try {
+      console.log('[Wallet] Connecting Phantom...');
       const response = await window.solana.connect();
       const publicKey = response.publicKey.toString();
+      
+      console.log('[Wallet] Phantom connected:', { address: publicKey, chainId: SOLANA_CHAIN_ID });
       
       set({
         solanaAddress: publicKey,
         solanaConnected: true,
         solanaConnecting: false,
+        activeWalletType: 'solana',
       });
       
       // Setup listeners
@@ -157,12 +176,14 @@ export const useWalletStore = create((set, get) => ({
       
       return publicKey;
     } catch (error) {
+      console.error('[Wallet] Phantom connection error:', error);
       set({ solanaConnecting: false });
       throw error;
     }
   },
   
   disconnectSolana: () => {
+    console.log('[Wallet] Disconnecting Solana wallet');
     if (window.solana?.disconnect) {
       window.solana.disconnect();
     }
@@ -170,24 +191,46 @@ export const useWalletStore = create((set, get) => ({
       solanaAddress: null,
       solanaBalance: null,
       solanaConnected: false,
+      activeWalletType: get().evmConnected ? 'evm' : null,
     });
+  },
+  
+  // Switch active wallet type
+  setActiveWalletType: (type) => {
+    console.log('[Wallet] Switching active wallet type to:', type);
+    set({ activeWalletType: type });
   },
   
   // Utility
   getActiveWallet: () => {
     const state = get();
-    if (state.evmConnected) {
+    if (state.activeWalletType === 'solana' && state.solanaConnected) {
+      return {
+        type: 'solana',
+        address: state.solanaAddress,
+        chainId: SOLANA_CHAIN_ID,
+      };
+    }
+    if (state.activeWalletType === 'evm' && state.evmConnected) {
       return {
         type: 'evm',
         address: state.evmAddress,
         chainId: state.evmChainId,
       };
     }
+    // Fallback to whichever is connected
     if (state.solanaConnected) {
       return {
         type: 'solana',
         address: state.solanaAddress,
-        chainId: 'SOL',
+        chainId: SOLANA_CHAIN_ID,
+      };
+    }
+    if (state.evmConnected) {
+      return {
+        type: 'evm',
+        address: state.evmAddress,
+        chainId: state.evmChainId,
       };
     }
     return null;
@@ -196,6 +239,15 @@ export const useWalletStore = create((set, get) => ({
   isAnyWalletConnected: () => {
     const state = get();
     return state.evmConnected || state.solanaConnected;
+  },
+  
+  // Get the default chain based on connected wallet
+  getDefaultChainId: () => {
+    const state = get();
+    if (state.activeWalletType === 'solana' || (!state.evmConnected && state.solanaConnected)) {
+      return SOLANA_CHAIN_ID;
+    }
+    return state.evmChainId || 1; // Default to Ethereum
   },
 }));
 
@@ -248,3 +300,5 @@ function getChainParams(chainId) {
   
   return chainConfigs[chainId];
 }
+
+export { SOLANA_CHAIN_ID };

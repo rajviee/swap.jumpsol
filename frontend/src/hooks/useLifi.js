@@ -1,19 +1,95 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { lifiApi } from '../services/api';
 
-// Chain ID mapping for icons and names
+// Solana chain ID used by LI.FI
+export const SOLANA_CHAIN_ID = 1151111081099710;
+
+// Chain ID mapping for icons and names with real logo URLs
 export const CHAIN_INFO = {
-  1: { name: 'Ethereum', symbol: 'ETH', icon: 'eth', color: '#627EEA' },
-  10: { name: 'Optimism', symbol: 'ETH', icon: 'op', color: '#FF0420' },
-  56: { name: 'BNB Chain', symbol: 'BNB', icon: 'bnb', color: '#F3BA2F' },
-  137: { name: 'Polygon', symbol: 'MATIC', icon: 'matic', color: '#8247E5' },
-  42161: { name: 'Arbitrum', symbol: 'ETH', icon: 'arb', color: '#12AAFF' },
-  43114: { name: 'Avalanche', symbol: 'AVAX', icon: 'avax', color: '#E84142' },
-  1151111081099710: { name: 'Solana', symbol: 'SOL', icon: 'sol', color: '#9945FF' },
+  1: { 
+    name: 'Ethereum', 
+    symbol: 'ETH', 
+    icon: 'eth', 
+    color: '#627EEA',
+    logoURI: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/ethereum.svg'
+  },
+  10: { 
+    name: 'Optimism', 
+    symbol: 'ETH', 
+    icon: 'op', 
+    color: '#FF0420',
+    logoURI: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/optimism.svg'
+  },
+  56: { 
+    name: 'BNB Chain', 
+    symbol: 'BNB', 
+    icon: 'bnb', 
+    color: '#F3BA2F',
+    logoURI: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/bsc.svg'
+  },
+  137: { 
+    name: 'Polygon', 
+    symbol: 'MATIC', 
+    icon: 'matic', 
+    color: '#8247E5',
+    logoURI: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/polygon.svg'
+  },
+  42161: { 
+    name: 'Arbitrum', 
+    symbol: 'ETH', 
+    icon: 'arb', 
+    color: '#12AAFF',
+    logoURI: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/arbitrum.svg'
+  },
+  43114: { 
+    name: 'Avalanche', 
+    symbol: 'AVAX', 
+    icon: 'avax', 
+    color: '#E84142',
+    logoURI: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/avalanche.svg'
+  },
+  [SOLANA_CHAIN_ID]: { 
+    name: 'Solana', 
+    symbol: 'SOL', 
+    icon: 'sol', 
+    color: '#9945FF',
+    logoURI: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/solana.svg'
+  },
 };
 
-// Popular chain IDs to show by default
-export const POPULAR_CHAIN_IDS = [1, 42161, 10, 137, 56, 43114, 1151111081099710];
+// Popular chain IDs to show by default - INCLUDES SOLANA
+export const POPULAR_CHAIN_IDS = [1, 42161, 10, 137, 56, 43114, SOLANA_CHAIN_ID];
+
+// Fallback Solana tokens if API fails
+export const FALLBACK_SOLANA_TOKENS = [
+  {
+    address: '11111111111111111111111111111111',
+    symbol: 'SOL',
+    name: 'Solana',
+    decimals: 9,
+    chainId: SOLANA_CHAIN_ID,
+    logoURI: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
+    priceUSD: '0',
+  },
+  {
+    address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    symbol: 'USDC',
+    name: 'USD Coin',
+    decimals: 6,
+    chainId: SOLANA_CHAIN_ID,
+    logoURI: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png',
+    priceUSD: '1',
+  },
+  {
+    address: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+    symbol: 'USDT',
+    name: 'Tether USD',
+    decimals: 6,
+    chainId: SOLANA_CHAIN_ID,
+    logoURI: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB/logo.png',
+    priceUSD: '1',
+  },
+];
 
 export function useChains() {
   const [chains, setChains] = useState([]);
@@ -24,14 +100,37 @@ export function useChains() {
     setLoading(true);
     setError(null);
     try {
+      console.log('[LI.FI] Fetching chains...');
       const data = await lifiApi.getChains();
-      // Filter to popular chains and sort
       const allChains = data.chains || [];
+      
+      console.log('[LI.FI] Chains received:', allChains.length);
+      
+      // Check if Solana is included
+      const hasSolana = allChains.some(c => c.id === SOLANA_CHAIN_ID);
+      console.log('[LI.FI] Solana in chain list:', hasSolana);
+      
+      // Sort: popular chains first, then others
       const popularChains = allChains.filter(c => POPULAR_CHAIN_IDS.includes(c.id));
       const otherChains = allChains.filter(c => !POPULAR_CHAIN_IDS.includes(c.id));
+      
+      // Ensure Solana is in the list if not present
+      if (!hasSolana) {
+        console.log('[LI.FI] Adding Solana chain manually');
+        popularChains.push({
+          id: SOLANA_CHAIN_ID,
+          name: 'Solana',
+          key: 'sol',
+          chainType: 'SVM',
+          coin: 'SOL',
+          mainnet: true,
+          logoURI: CHAIN_INFO[SOLANA_CHAIN_ID].logoURI,
+        });
+      }
+      
       setChains([...popularChains, ...otherChains]);
     } catch (err) {
-      console.error('Failed to fetch chains:', err);
+      console.error('[LI.FI] Failed to fetch chains:', err);
       setError(err.message || 'Failed to fetch chains');
     } finally {
       setLoading(false);
@@ -50,6 +149,8 @@ export function useTokens(chainIds = []) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const chainIdsKey = useMemo(() => chainIds.sort().join(','), [chainIds]);
+
   const fetchTokens = useCallback(async () => {
     if (chainIds.length === 0) {
       setTokens({});
@@ -59,15 +160,53 @@ export function useTokens(chainIds = []) {
     setLoading(true);
     setError(null);
     try {
+      console.log('[LI.FI] Fetching tokens for chains:', chainIds);
       const data = await lifiApi.getTokens(chainIds);
-      setTokens(data.tokens || {});
+      const fetchedTokens = data.tokens || {};
+      
+      console.log('[LI.FI] Tokens received for chains:', Object.keys(fetchedTokens));
+      
+      // Add fallback Solana tokens if Solana chain is requested but no tokens returned
+      if (chainIds.includes(SOLANA_CHAIN_ID)) {
+        const solanaTokens = fetchedTokens[SOLANA_CHAIN_ID] || [];
+        console.log('[LI.FI] Solana tokens count:', solanaTokens.length);
+        
+        if (solanaTokens.length === 0) {
+          console.log('[LI.FI] Using fallback Solana tokens');
+          fetchedTokens[SOLANA_CHAIN_ID] = FALLBACK_SOLANA_TOKENS;
+        } else {
+          // Ensure SOL is at the top
+          const solIndex = solanaTokens.findIndex(t => 
+            t.symbol === 'SOL' || t.address === '11111111111111111111111111111111'
+          );
+          if (solIndex > 0) {
+            const sol = solanaTokens.splice(solIndex, 1)[0];
+            solanaTokens.unshift(sol);
+          } else if (solIndex === -1) {
+            // Add SOL if not present
+            solanaTokens.unshift(FALLBACK_SOLANA_TOKENS[0]);
+          }
+          fetchedTokens[SOLANA_CHAIN_ID] = solanaTokens;
+        }
+      }
+      
+      setTokens(fetchedTokens);
     } catch (err) {
-      console.error('Failed to fetch tokens:', err);
+      console.error('[LI.FI] Failed to fetch tokens:', err);
       setError(err.message || 'Failed to fetch tokens');
+      
+      // Use fallback tokens for Solana on error
+      if (chainIds.includes(SOLANA_CHAIN_ID)) {
+        console.log('[LI.FI] Using fallback Solana tokens due to error');
+        setTokens(prev => ({
+          ...prev,
+          [SOLANA_CHAIN_ID]: FALLBACK_SOLANA_TOKENS,
+        }));
+      }
     } finally {
       setLoading(false);
     }
-  }, [chainIds.join(',')]);
+  }, [chainIdsKey]);
 
   useEffect(() => {
     fetchTokens();
@@ -100,7 +239,7 @@ export function useQuote() {
       setQuote(data);
       return data;
     } catch (err) {
-      console.error('Failed to fetch quote:', err);
+      console.error('[LI.FI] Failed to fetch quote:', err);
       const errorMessage = err.response?.data?.message || err.response?.data?.detail || err.message || 'Failed to fetch quote';
       setError(errorMessage);
       setQuote(null);
@@ -137,7 +276,7 @@ export function useRoutes() {
       setRoutes(data.routes || []);
       return data.routes || [];
     } catch (err) {
-      console.error('Failed to fetch routes:', err);
+      console.error('[LI.FI] Failed to fetch routes:', err);
       const errorMessage = err.response?.data?.message || err.response?.data?.detail || err.message || 'Failed to fetch routes';
       setError(errorMessage);
       setRoutes([]);
@@ -172,7 +311,7 @@ export function useTxStatus() {
       setStatus(data);
       return data;
     } catch (err) {
-      console.error('Failed to fetch status:', err);
+      console.error('[LI.FI] Failed to fetch status:', err);
       setError(err.message || 'Failed to fetch status');
       return null;
     } finally {
@@ -222,4 +361,17 @@ export function formatTimeEstimate(seconds) {
   if (seconds < 60) return `~${seconds}s`;
   if (seconds < 3600) return `~${Math.round(seconds / 60)}m`;
   return `~${Math.round(seconds / 3600)}h`;
+}
+
+// Get chain logo URL
+export function getChainLogoUrl(chainId) {
+  const info = CHAIN_INFO[chainId];
+  if (info?.logoURI) return info.logoURI;
+  return null;
+}
+
+// Get token logo URL with fallback
+export function getTokenLogoUrl(token) {
+  if (token?.logoURI) return token.logoURI;
+  return null;
 }

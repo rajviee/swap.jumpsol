@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,9 +9,115 @@ import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { Skeleton } from './ui/skeleton';
 import { Search, X, Check } from 'lucide-react';
-import { CHAIN_INFO, POPULAR_CHAIN_IDS, formatTokenAmount } from '../hooks/useLifi';
+import { CHAIN_INFO, POPULAR_CHAIN_IDS, formatTokenAmount, SOLANA_CHAIN_ID, FALLBACK_SOLANA_TOKENS } from '../hooks/useLifi';
 
-export const TokenSelectModal = ({
+// Memoized token row component to prevent unnecessary re-renders
+const TokenRow = memo(({ token, chainId, isSelected, onSelect, balance, getChainInfo }) => {
+  const chainInfo = getChainInfo(chainId);
+  
+  return (
+    <button
+      onClick={() => onSelect(token)}
+      className={`w-full flex items-center gap-3 p-3 rounded-[10px] token-row ${
+        isSelected ? 'bg-[#C1FF72]/10 border border-[#C1FF72]/30' : ''
+      }`}
+      data-testid={`token-option-${token.symbol}`}
+    >
+      {/* Token Icon */}
+      <div className="relative flex-shrink-0">
+        {token.logoURI ? (
+          <img 
+            src={token.logoURI} 
+            alt={token.symbol}
+            className="w-10 h-10 rounded-full bg-[#222]"
+            loading="lazy"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.style.display = 'none';
+              e.target.nextSibling.style.display = 'flex';
+            }}
+          />
+        ) : null}
+        <div 
+          className={`w-10 h-10 rounded-full bg-[#222] items-center justify-center text-white font-bold text-sm ${token.logoURI ? 'hidden' : 'flex'}`}
+        >
+          {token.symbol?.charAt(0) || '?'}
+        </div>
+        {/* Chain indicator */}
+        {chainInfo.logoURI ? (
+          <img 
+            src={chainInfo.logoURI}
+            alt={chainInfo.name}
+            className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[#0a0a0a]"
+          />
+        ) : (
+          <div 
+            className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[#0a0a0a] text-[6px] font-bold flex items-center justify-center"
+            style={{ backgroundColor: chainInfo.color }}
+          >
+            {chainInfo.symbol?.charAt(0) || '?'}
+          </div>
+        )}
+      </div>
+
+      {/* Token Info */}
+      <div className="flex-1 text-left min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-white truncate">{token.symbol}</span>
+          {isSelected && (
+            <Check className="w-4 h-4 text-[#C1FF72] flex-shrink-0" />
+          )}
+        </div>
+        <span className="text-xs text-gray-500 truncate block">{token.name}</span>
+      </div>
+
+      {/* Balance */}
+      {balance !== undefined && (
+        <div className="text-right flex-shrink-0">
+          <div className="text-sm font-mono text-white">
+            {formatTokenAmount(balance, token.decimals, 4)}
+          </div>
+          <div className="text-xs text-gray-500">Balance</div>
+        </div>
+      )}
+    </button>
+  );
+});
+
+TokenRow.displayName = 'TokenRow';
+
+// Memoized chain filter button
+const ChainFilterButton = memo(({ chain, isActive, onClick, chainInfo }) => (
+  <button
+    onClick={onClick}
+    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
+      isActive 
+        ? 'bg-[#C1FF72] text-black' 
+        : 'bg-[#111] text-gray-400 hover:bg-[#1a1a1a] hover:text-white'
+    }`}
+    data-testid={`chain-filter-${chain.id}`}
+  >
+    {chainInfo.logoURI ? (
+      <img 
+        src={chainInfo.logoURI} 
+        alt={chain.name} 
+        className="w-4 h-4 rounded-full"
+      />
+    ) : (
+      <div 
+        className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white"
+        style={{ backgroundColor: chainInfo.color }}
+      >
+        {chainInfo.symbol?.charAt(0) || '?'}
+      </div>
+    )}
+    {chain.name}
+  </button>
+));
+
+ChainFilterButton.displayName = 'ChainFilterButton';
+
+export const TokenSelectModal = memo(({
   open,
   onClose,
   onSelect,
@@ -22,6 +128,7 @@ export const TokenSelectModal = ({
   title = 'Select Token',
   loading = false,
   walletBalances = {},
+  defaultToSolana = false,
 }) => {
   const [search, setSearch] = useState('');
   const [activeChainId, setActiveChainId] = useState(selectedChainId);
@@ -30,20 +137,40 @@ export const TokenSelectModal = ({
   useEffect(() => {
     if (open) {
       setSearch('');
-      setActiveChainId(selectedChainId || (chains[0]?.id));
+      // Default to Solana if specified, otherwise use selected or first chain
+      if (defaultToSolana && chains.some(c => c.id === SOLANA_CHAIN_ID)) {
+        setActiveChainId(SOLANA_CHAIN_ID);
+      } else {
+        setActiveChainId(selectedChainId || (chains[0]?.id));
+      }
     }
-  }, [open, selectedChainId, chains]);
+  }, [open, selectedChainId, chains, defaultToSolana]);
 
-  // Get popular chains first
+  // Get popular chains first - memoized
   const sortedChains = useMemo(() => {
     const popular = chains.filter(c => POPULAR_CHAIN_IDS.includes(c.id));
     const others = chains.filter(c => !POPULAR_CHAIN_IDS.includes(c.id));
+    
+    // Ensure Solana is in popular chains
+    const hasSolana = popular.some(c => c.id === SOLANA_CHAIN_ID);
+    if (!hasSolana) {
+      const solanaChain = chains.find(c => c.id === SOLANA_CHAIN_ID);
+      if (solanaChain) {
+        popular.push(solanaChain);
+      }
+    }
+    
     return [...popular, ...others];
   }, [chains]);
 
-  // Get tokens for active chain
+  // Get tokens for active chain with fallback for Solana
   const chainTokens = useMemo(() => {
-    const tokenList = tokens[activeChainId] || [];
+    let tokenList = tokens[activeChainId] || [];
+    
+    // Use fallback tokens for Solana if empty
+    if (activeChainId === SOLANA_CHAIN_ID && tokenList.length === 0) {
+      tokenList = FALLBACK_SOLANA_TOKENS;
+    }
     
     // Filter by search
     if (search) {
@@ -58,32 +185,39 @@ export const TokenSelectModal = ({
     return tokenList;
   }, [tokens, activeChainId, search]);
 
-  // Sort tokens by balance then alphabetically
+  // Sort tokens by balance then alphabetically - memoized
   const sortedTokens = useMemo(() => {
     return [...chainTokens].sort((a, b) => {
       const balanceA = walletBalances[a.address] || 0;
       const balanceB = walletBalances[b.address] || 0;
       if (balanceB !== balanceA) return balanceB - balanceA;
+      // Put native tokens first (SOL, ETH)
+      if (a.symbol === 'SOL' || a.symbol === 'ETH') return -1;
+      if (b.symbol === 'SOL' || b.symbol === 'ETH') return 1;
       return (a.symbol || '').localeCompare(b.symbol || '');
     });
   }, [chainTokens, walletBalances]);
 
-  const handleSelectToken = (token) => {
+  const handleSelectToken = useCallback((token) => {
     onSelect({
       ...token,
       chainId: activeChainId,
     });
     onClose();
-  };
+  }, [activeChainId, onSelect, onClose]);
 
-  const getChainInfo = (chainId) => {
+  const getChainInfo = useCallback((chainId) => {
     return CHAIN_INFO[chainId] || { name: `Chain ${chainId}`, symbol: '?', color: '#666' };
-  };
+  }, []);
 
-  const isTokenSelected = (token) => {
+  const isTokenSelected = useCallback((token) => {
     return selectedToken?.address?.toLowerCase() === token.address?.toLowerCase() &&
            selectedToken?.chainId === activeChainId;
-  };
+  }, [selectedToken, activeChainId]);
+
+  const handleChainClick = useCallback((chainId) => {
+    setActiveChainId(chainId);
+  }, []);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -114,30 +248,19 @@ export const TokenSelectModal = ({
             />
           </div>
 
-          {/* Chain Filter */}
-          <div className="flex gap-2 pb-3 overflow-x-auto scrollbar-hide">
-            {sortedChains.slice(0, 7).map((chain) => {
+          {/* Chain Filter - Fixed horizontal scroll */}
+          <div className="chain-scroll flex gap-2 pb-3">
+            {sortedChains.slice(0, 8).map((chain) => {
               const info = getChainInfo(chain.id);
               const isActive = activeChainId === chain.id;
               return (
-                <button
+                <ChainFilterButton
                   key={chain.id}
-                  onClick={() => setActiveChainId(chain.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-medium whitespace-nowrap transition-colors ${
-                    isActive 
-                      ? 'bg-[#C1FF72] text-black' 
-                      : 'bg-[#111] text-gray-400 hover:bg-[#1a1a1a] hover:text-white'
-                  }`}
-                  data-testid={`chain-filter-${chain.id}`}
-                >
-                  <div 
-                    className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold"
-                    style={{ backgroundColor: info.color }}
-                  >
-                    {info.symbol.charAt(0)}
-                  </div>
-                  {chain.name}
-                </button>
+                  chain={chain}
+                  isActive={isActive}
+                  onClick={() => handleChainClick(chain.id)}
+                  chainInfo={info}
+                />
               );
             })}
           </div>
@@ -166,76 +289,24 @@ export const TokenSelectModal = ({
                 <p className="text-xs mt-1">Try a different search or chain</p>
               </div>
             ) : (
-              // Token list
-              sortedTokens.map((token) => {
-                const balance = walletBalances[token.address];
-                const isSelected = isTokenSelected(token);
-                
-                return (
-                  <button
-                    key={`${activeChainId}-${token.address}`}
-                    onClick={() => handleSelectToken(token)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-[10px] token-row ${
-                      isSelected ? 'bg-[#C1FF72]/10 border border-[#C1FF72]/30' : ''
-                    }`}
-                    data-testid={`token-option-${token.symbol}`}
-                  >
-                    {/* Token Icon */}
-                    <div className="relative">
-                      {token.logoURI ? (
-                        <img 
-                          src={token.logoURI} 
-                          alt={token.symbol}
-                          className="w-10 h-10 rounded-full bg-[#222]"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = '';
-                            e.target.className = 'w-10 h-10 rounded-full bg-[#222] flex items-center justify-center text-white font-bold text-sm';
-                          }}
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-[#222] flex items-center justify-center text-white font-bold text-sm">
-                          {token.symbol?.charAt(0) || '?'}
-                        </div>
-                      )}
-                      {/* Chain indicator */}
-                      <div 
-                        className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[#0a0a0a] text-[6px] font-bold flex items-center justify-center"
-                        style={{ backgroundColor: getChainInfo(activeChainId).color }}
-                      >
-                        {getChainInfo(activeChainId).symbol.charAt(0)}
-                      </div>
-                    </div>
-
-                    {/* Token Info */}
-                    <div className="flex-1 text-left">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-white">{token.symbol}</span>
-                        {isSelected && (
-                          <Check className="w-4 h-4 text-[#C1FF72]" />
-                        )}
-                      </div>
-                      <span className="text-xs text-gray-500">{token.name}</span>
-                    </div>
-
-                    {/* Balance */}
-                    <div className="text-right">
-                      {balance !== undefined && (
-                        <>
-                          <div className="text-sm font-mono text-white">
-                            {formatTokenAmount(balance, token.decimals, 4)}
-                          </div>
-                          <div className="text-xs text-gray-500">Balance</div>
-                        </>
-                      )}
-                    </div>
-                  </button>
-                );
-              })
+              // Token list - virtualized rendering for performance
+              sortedTokens.slice(0, 100).map((token) => (
+                <TokenRow
+                  key={`${activeChainId}-${token.address}`}
+                  token={token}
+                  chainId={activeChainId}
+                  isSelected={isTokenSelected(token)}
+                  onSelect={handleSelectToken}
+                  balance={walletBalances[token.address]}
+                  getChainInfo={getChainInfo}
+                />
+              ))
             )}
           </div>
         </ScrollArea>
       </DialogContent>
     </Dialog>
   );
-};
+});
+
+TokenSelectModal.displayName = 'TokenSelectModal';

@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useWalletStore } from '../store/walletStore';
+import { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import { useWalletStore, SOLANA_CHAIN_ID } from '../store/walletStore';
 import { transactionApi } from '../services/api';
 import { formatTokenAmount, formatUSD, CHAIN_INFO } from '../hooks/useLifi';
 import { ScrollArea } from './ui/scroll-area';
@@ -24,15 +24,13 @@ import {
   Clock, 
   CheckCircle2, 
   XCircle, 
-  Loader2,
   History,
-  Filter,
   RefreshCw,
   Copy
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const StatusBadge = ({ status }) => {
+const StatusBadge = memo(({ status }) => {
   const config = {
     pending: { icon: Clock, className: 'status-pending', text: 'Pending' },
     success: { icon: CheckCircle2, className: 'status-success', text: 'Success' },
@@ -47,9 +45,11 @@ const StatusBadge = ({ status }) => {
       {text}
     </div>
   );
-};
+});
 
-const TxTypeLabel = ({ type }) => {
+StatusBadge.displayName = 'StatusBadge';
+
+const TxTypeLabel = memo(({ type }) => {
   const labels = {
     swap: 'Swap',
     bridge: 'Bridge',
@@ -60,9 +60,55 @@ const TxTypeLabel = ({ type }) => {
       {labels[type] || type}
     </span>
   );
-};
+});
 
-export const TransactionHistory = ({ refreshTrigger }) => {
+TxTypeLabel.displayName = 'TxTypeLabel';
+
+// Memoized transaction row
+const TxRow = memo(({ tx, onSelect, formatDate }) => (
+  <button
+    onClick={() => onSelect(tx)}
+    className="w-full tx-row rounded-[10px] bg-[#111] text-left"
+    data-testid={`tx-row-${tx.id}`}
+  >
+    <div className="flex items-center gap-3">
+      {/* Token Icons */}
+      <div className="relative flex-shrink-0">
+        <div className="w-10 h-10 rounded-full bg-[#222] flex items-center justify-center text-white font-bold text-sm">
+          {tx.from_token_symbol?.charAt(0) || '?'}
+        </div>
+        <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#333] flex items-center justify-center text-white text-[8px] font-bold border-2 border-[#111]">
+          {tx.to_token_symbol?.charAt(0) || '?'}
+        </div>
+      </div>
+
+      {/* Tx Info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-white font-medium truncate">
+            {tx.from_token_symbol}
+          </span>
+          <ArrowRight className="w-3 h-3 text-gray-500 flex-shrink-0" />
+          <span className="text-white font-medium truncate">
+            {tx.to_token_symbol}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <TxTypeLabel type={tx.tx_type} />
+          <span>•</span>
+          <span>{formatDate(tx.created_at)}</span>
+        </div>
+      </div>
+
+      {/* Status */}
+      <StatusBadge status={tx.status} />
+    </div>
+  </button>
+));
+
+TxRow.displayName = 'TxRow';
+
+export const TransactionHistory = memo(({ refreshTrigger }) => {
   const { evmAddress, solanaAddress, evmConnected, solanaConnected } = useWalletStore();
   
   const [transactions, setTransactions] = useState([]);
@@ -106,7 +152,7 @@ export const TransactionHistory = ({ refreshTrigger }) => {
   }, [fetchTransactions, refreshTrigger]);
 
   // Get explorer URL for transaction
-  const getExplorerUrl = (tx) => {
+  const getExplorerUrl = useCallback((tx) => {
     const explorers = {
       1: 'https://etherscan.io/tx/',
       42161: 'https://arbiscan.io/tx/',
@@ -114,12 +160,12 @@ export const TransactionHistory = ({ refreshTrigger }) => {
       137: 'https://polygonscan.com/tx/',
       56: 'https://bscscan.com/tx/',
       43114: 'https://snowtrace.io/tx/',
-      1151111081099710: 'https://solscan.io/tx/',
+      [SOLANA_CHAIN_ID]: 'https://solscan.io/tx/',
     };
     return `${explorers[tx.from_chain_id] || explorers[1]}${tx.tx_hash}`;
-  };
+  }, []);
 
-  const formatDate = (dateString) => {
+  const formatDate = useCallback((dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       month: 'short',
@@ -127,16 +173,20 @@ export const TransactionHistory = ({ refreshTrigger }) => {
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
+  }, []);
 
-  const copyTxHash = (hash) => {
+  const copyTxHash = useCallback((hash) => {
     navigator.clipboard.writeText(hash);
     toast.success('Transaction hash copied');
-  };
+  }, []);
 
-  const getChainName = (chainId) => {
+  const getChainName = useCallback((chainId) => {
     return CHAIN_INFO[chainId]?.name || `Chain ${chainId}`;
-  };
+  }, []);
+
+  const handleSelectTx = useCallback((tx) => {
+    setSelectedTx(tx);
+  }, []);
 
   if (!isConnected) {
     return (
@@ -224,45 +274,12 @@ export const TransactionHistory = ({ refreshTrigger }) => {
           ) : (
             <div className="space-y-2">
               {transactions.map((tx) => (
-                <button
-                  key={tx.id}
-                  onClick={() => setSelectedTx(tx)}
-                  className="w-full tx-row rounded-[10px] bg-[#111] text-left"
-                  data-testid={`tx-row-${tx.id}`}
-                >
-                  <div className="flex items-center gap-3">
-                    {/* Token Icons */}
-                    <div className="relative">
-                      <div className="w-10 h-10 rounded-full bg-[#222] flex items-center justify-center text-white font-bold text-sm">
-                        {tx.from_token_symbol?.charAt(0) || '?'}
-                      </div>
-                      <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#333] flex items-center justify-center text-white text-[8px] font-bold border-2 border-[#111]">
-                        {tx.to_token_symbol?.charAt(0) || '?'}
-                      </div>
-                    </div>
-
-                    {/* Tx Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-white font-medium truncate">
-                          {tx.from_token_symbol}
-                        </span>
-                        <ArrowRight className="w-3 h-3 text-gray-500 flex-shrink-0" />
-                        <span className="text-white font-medium truncate">
-                          {tx.to_token_symbol}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <TxTypeLabel type={tx.tx_type} />
-                        <span>•</span>
-                        <span>{formatDate(tx.created_at)}</span>
-                      </div>
-                    </div>
-
-                    {/* Status */}
-                    <StatusBadge status={tx.status} />
-                  </div>
-                </button>
+                <TxRow 
+                  key={tx.id} 
+                  tx={tx} 
+                  onSelect={handleSelectTx}
+                  formatDate={formatDate}
+                />
               ))}
             </div>
           )}
@@ -369,4 +386,6 @@ export const TransactionHistory = ({ refreshTrigger }) => {
       </Dialog>
     </>
   );
-};
+});
+
+TransactionHistory.displayName = 'TransactionHistory';

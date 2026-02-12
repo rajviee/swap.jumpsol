@@ -1,13 +1,13 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useWalletStore } from '../store/walletStore';
-import { useChains, useTokens, useQuote, formatTokenAmount, formatUSD, formatTimeEstimate, parseTokenAmount } from '../hooks/useLifi';
+import { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import { useWalletStore, SOLANA_CHAIN_ID } from '../store/walletStore';
+import { useChains, useTokens, useQuote, formatTokenAmount, formatUSD, formatTimeEstimate, parseTokenAmount, CHAIN_INFO, getChainLogoUrl } from '../hooks/useLifi';
 import { transactionApi } from '../services/api';
 import { TokenSelectModal } from './TokenSelectModal';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Skeleton } from './ui/skeleton';
 import { toast } from 'sonner';
-import { ArrowDownUp, ChevronDown, Loader2, AlertCircle, Clock, Route, Info, Zap } from 'lucide-react';
+import { ArrowDownUp, ChevronDown, Loader2, AlertCircle, Clock, Route, Zap } from 'lucide-react';
 import { ethers } from 'ethers';
 
 // Debounce hook
@@ -20,8 +20,43 @@ function useDebounce(value, delay) {
   return debouncedValue;
 }
 
-export const SwapCard = ({ onTransactionComplete }) => {
-  const { evmConnected, evmAddress, evmChainId, solanaConnected, solanaAddress, setShowWalletModal } = useWalletStore();
+// Memoized token button component
+const TokenButton = memo(({ token, onClick, testId }) => (
+  <button
+    onClick={onClick}
+    className="token-selector"
+    data-testid={testId}
+  >
+    {token ? (
+      <>
+        {token.logoURI ? (
+          <img src={token.logoURI} alt={token.symbol} className="w-6 h-6 rounded-full" />
+        ) : (
+          <div className="w-6 h-6 rounded-full bg-[#333] flex items-center justify-center text-xs font-bold text-white">
+            {token.symbol?.charAt(0) || '?'}
+          </div>
+        )}
+        <span className="font-semibold text-white">{token.symbol}</span>
+      </>
+    ) : (
+      <span className="text-gray-400">Select</span>
+    )}
+    <ChevronDown className="w-4 h-4 text-gray-400" />
+  </button>
+));
+
+TokenButton.displayName = 'TokenButton';
+
+export const SwapCard = memo(({ onTransactionComplete }) => {
+  const { 
+    evmConnected, 
+    evmAddress, 
+    solanaConnected, 
+    solanaAddress, 
+    setShowWalletModal,
+    activeWalletType,
+    getDefaultChainId,
+  } = useWalletStore();
   
   // Form state
   const [fromToken, setFromToken] = useState(null);
@@ -43,10 +78,32 @@ export const SwapCard = ({ onTransactionComplete }) => {
   const debouncedAmount = useDebounce(fromAmount, 500);
 
   // Get active wallet address
-  const walletAddress = evmAddress || solanaAddress;
+  const walletAddress = useMemo(() => {
+    if (activeWalletType === 'solana') return solanaAddress;
+    if (activeWalletType === 'evm') return evmAddress;
+    return evmAddress || solanaAddress;
+  }, [activeWalletType, evmAddress, solanaAddress]);
+  
   const isConnected = evmConnected || solanaConnected;
+  
+  // Determine if should default to Solana in token modal
+  const shouldDefaultToSolana = useMemo(() => {
+    return activeWalletType === 'solana' || (solanaConnected && !evmConnected);
+  }, [activeWalletType, solanaConnected, evmConnected]);
 
-  // Calculate from amount in wei
+  // Log wallet state for debugging
+  useEffect(() => {
+    console.log('[SwapCard] Wallet state:', {
+      activeWalletType,
+      evmConnected,
+      solanaConnected,
+      evmAddress,
+      solanaAddress,
+      shouldDefaultToSolana,
+    });
+  }, [activeWalletType, evmConnected, solanaConnected, evmAddress, solanaAddress, shouldDefaultToSolana]);
+
+  // Calculate from amount in wei/lamports
   const fromAmountWei = useMemo(() => {
     if (!fromAmount || !fromToken?.decimals) return '0';
     return parseTokenAmount(fromAmount, fromToken.decimals);
@@ -70,27 +127,37 @@ export const SwapCard = ({ onTransactionComplete }) => {
   }, [fromToken, toToken, debouncedAmount, walletAddress, fromAmountWei, fetchQuote, clearQuote]);
 
   // Swap from/to tokens
-  const handleSwapDirection = () => {
+  const handleSwapDirection = useCallback(() => {
     const tempFrom = fromToken;
     const tempAmount = quote ? formatTokenAmount(quote.estimate.toAmount, toToken?.decimals, 6) : '';
     setFromToken(toToken);
     setToToken(tempFrom);
     setFromAmount(tempAmount);
-  };
+  }, [fromToken, toToken, quote]);
 
   // Handle token selection
-  const handleSelectFromToken = (token) => {
+  const handleSelectFromToken = useCallback((token) => {
+    console.log('[SwapCard] Selected from token:', token);
     setFromToken(token);
     clearQuote();
-  };
+  }, [clearQuote]);
 
-  const handleSelectToToken = (token) => {
+  const handleSelectToToken = useCallback((token) => {
+    console.log('[SwapCard] Selected to token:', token);
     setToToken(token);
     clearQuote();
-  };
+  }, [clearQuote]);
+
+  // Handle amount change
+  const handleAmountChange = useCallback((e) => {
+    const value = e.target.value.replace(/[^0-9.]/g, '');
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      setFromAmount(value);
+    }
+  }, []);
 
   // Execute swap
-  const handleSwap = async () => {
+  const handleSwap = useCallback(async () => {
     if (!quote || !walletAddress) return;
 
     setIsSwapping(true);
@@ -121,6 +188,15 @@ export const SwapCard = ({ onTransactionComplete }) => {
 
       if (!transactionRequest) {
         throw new Error('No transaction data available');
+      }
+
+      // Check if this is a Solana transaction
+      if (fromToken.chainId === SOLANA_CHAIN_ID) {
+        toast.info('Solana swaps require Phantom wallet signing');
+        // TODO: Implement Solana transaction signing
+        await transactionApi.update(txRecord.id, { status: 'failed' });
+        toast.error('Solana swap execution coming soon');
+        return;
       }
 
       // Execute transaction with MetaMask
@@ -185,10 +261,6 @@ export const SwapCard = ({ onTransactionComplete }) => {
         } else {
           toast.error('Transaction failed');
         }
-      } else if (solanaConnected) {
-        // TODO: Implement Solana swap execution
-        toast.error('Solana swaps coming soon!');
-        await transactionApi.update(txRecord.id, { status: 'failed' });
       }
     } catch (error) {
       console.error('Swap error:', error);
@@ -200,10 +272,16 @@ export const SwapCard = ({ onTransactionComplete }) => {
     } finally {
       setIsSwapping(false);
     }
-  };
+  }, [quote, walletAddress, fromToken, toToken, fromAmountWei, evmConnected, clearQuote, onTransactionComplete]);
+
+  // Get chain name helper
+  const getChainName = useCallback((chainId) => {
+    const chain = chains.find(c => c.id === chainId);
+    return chain?.name || CHAIN_INFO[chainId]?.name || 'Unknown';
+  }, [chains]);
 
   // Get button state
-  const getButtonState = () => {
+  const buttonState = useMemo(() => {
     if (!isConnected) return { text: 'Connect Wallet', disabled: false, action: () => setShowWalletModal(true) };
     if (!fromToken) return { text: 'Select From Token', disabled: true };
     if (!toToken) return { text: 'Select To Token', disabled: true };
@@ -213,9 +291,7 @@ export const SwapCard = ({ onTransactionComplete }) => {
     if (!quote) return { text: 'Getting Quote...', disabled: true };
     if (isSwapping) return { text: 'Swapping...', disabled: true };
     return { text: 'Swap', disabled: false, action: handleSwap };
-  };
-
-  const buttonState = getButtonState();
+  }, [isConnected, fromToken, toToken, fromAmount, quoteLoading, quoteError, quote, isSwapping, handleSwap, setShowWalletModal]);
 
   return (
     <>
@@ -245,36 +321,26 @@ export const SwapCard = ({ onTransactionComplete }) => {
               inputMode="decimal"
               placeholder="0.0"
               value={fromAmount}
-              onChange={(e) => {
-                const value = e.target.value.replace(/[^0-9.]/g, '');
-                if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                  setFromAmount(value);
-                }
-              }}
+              onChange={handleAmountChange}
               className="flex-1 h-14 bg-transparent border-none text-2xl font-mono text-white placeholder:text-gray-600 focus-visible:ring-0 p-0"
               data-testid="from-amount-input"
             />
-            <button
-              onClick={() => setShowFromModal(true)}
-              className="token-selector"
-              data-testid="from-token-select"
-            >
-              {fromToken ? (
-                <>
-                  {fromToken.logoURI && (
-                    <img src={fromToken.logoURI} alt={fromToken.symbol} className="w-6 h-6 rounded-full" />
-                  )}
-                  <span className="font-semibold text-white">{fromToken.symbol}</span>
-                </>
-              ) : (
-                <span className="text-gray-400">Select</span>
-              )}
-              <ChevronDown className="w-4 h-4 text-gray-400" />
-            </button>
+            <TokenButton 
+              token={fromToken} 
+              onClick={() => setShowFromModal(true)} 
+              testId="from-token-select"
+            />
           </div>
           {fromToken && (
-            <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-              <span>on {chains.find(c => c.id === fromToken.chainId)?.name || 'Unknown'}</span>
+            <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+              {CHAIN_INFO[fromToken.chainId]?.logoURI ? (
+                <img 
+                  src={CHAIN_INFO[fromToken.chainId].logoURI} 
+                  alt="" 
+                  className="w-4 h-4 rounded-full"
+                />
+              ) : null}
+              <span>on {getChainName(fromToken.chainId)}</span>
             </div>
           )}
         </div>
@@ -311,27 +377,22 @@ export const SwapCard = ({ onTransactionComplete }) => {
                 </span>
               </div>
             )}
-            <button
-              onClick={() => setShowToModal(true)}
-              className="token-selector"
-              data-testid="to-token-select"
-            >
-              {toToken ? (
-                <>
-                  {toToken.logoURI && (
-                    <img src={toToken.logoURI} alt={toToken.symbol} className="w-6 h-6 rounded-full" />
-                  )}
-                  <span className="font-semibold text-white">{toToken.symbol}</span>
-                </>
-              ) : (
-                <span className="text-gray-400">Select</span>
-              )}
-              <ChevronDown className="w-4 h-4 text-gray-400" />
-            </button>
+            <TokenButton 
+              token={toToken} 
+              onClick={() => setShowToModal(true)} 
+              testId="to-token-select"
+            />
           </div>
           {toToken && (
-            <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-              <span>on {chains.find(c => c.id === toToken.chainId)?.name || 'Unknown'}</span>
+            <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+              {CHAIN_INFO[toToken.chainId]?.logoURI ? (
+                <img 
+                  src={CHAIN_INFO[toToken.chainId].logoURI} 
+                  alt="" 
+                  className="w-4 h-4 rounded-full"
+                />
+              ) : null}
+              <span>on {getChainName(toToken.chainId)}</span>
             </div>
           )}
         </div>
@@ -404,6 +465,7 @@ export const SwapCard = ({ onTransactionComplete }) => {
         selectedToken={fromToken}
         title="Select From Token"
         loading={tokensLoading || chainsLoading}
+        defaultToSolana={shouldDefaultToSolana}
       />
 
       <TokenSelectModal
@@ -416,7 +478,10 @@ export const SwapCard = ({ onTransactionComplete }) => {
         selectedToken={toToken}
         title="Select To Token"
         loading={tokensLoading || chainsLoading}
+        defaultToSolana={shouldDefaultToSolana}
       />
     </>
   );
-};
+});
+
+SwapCard.displayName = 'SwapCard';
