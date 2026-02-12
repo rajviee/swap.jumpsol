@@ -166,14 +166,20 @@ export function useTokens(chainIds = []) {
       
       console.log('[LI.FI] Tokens received for chains:', Object.keys(fetchedTokens));
       
+      // Normalize keys to numbers for consistent access
+      const normalizedTokens = {};
+      Object.keys(fetchedTokens).forEach(key => {
+        normalizedTokens[Number(key)] = fetchedTokens[key];
+      });
+      
       // Add fallback Solana tokens if Solana chain is requested but no tokens returned
       if (chainIds.includes(SOLANA_CHAIN_ID)) {
-        const solanaTokens = fetchedTokens[SOLANA_CHAIN_ID] || [];
+        const solanaTokens = normalizedTokens[SOLANA_CHAIN_ID] || [];
         console.log('[LI.FI] Solana tokens count:', solanaTokens.length);
         
         if (solanaTokens.length === 0) {
           console.log('[LI.FI] Using fallback Solana tokens');
-          fetchedTokens[SOLANA_CHAIN_ID] = FALLBACK_SOLANA_TOKENS;
+          normalizedTokens[SOLANA_CHAIN_ID] = FALLBACK_SOLANA_TOKENS;
         } else {
           // Ensure SOL is at the top
           const solIndex = solanaTokens.findIndex(t => 
