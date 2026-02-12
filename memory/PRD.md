@@ -41,11 +41,12 @@ Build a Rhino.fi-style cross-chain swap web app using LI.FI APIs. Users must be 
 4. ✅ Real-time quote fetching
 5. ✅ Transaction history with MongoDB persistence
 6. ✅ Responsive design
+7. ✅ Solana chain support (3,407 tokens)
 
 ### API Endpoints
 - `GET /api/health` - Health check
-- `GET /api/lifi/chains` - Get supported chains
-- `GET /api/lifi/tokens` - Get supported tokens
+- `GET /api/lifi/chains` - Get supported chains (59 chains)
+- `GET /api/lifi/tokens` - Get supported tokens (13,000+ tokens)
 - `GET /api/lifi/quote` - Get swap quote
 - `POST /api/lifi/routes` - Get multiple routes
 - `GET /api/lifi/status` - Get tx status
@@ -56,21 +57,31 @@ Build a Rhino.fi-style cross-chain swap web app using LI.FI APIs. Users must be 
 
 ## What's Been Implemented
 
-### Jan 12, 2026
-- Initial MVP implementation
+### Jan 12, 2026 - Initial MVP
 - Backend: FastAPI with LI.FI API integration, MongoDB transaction storage
 - Frontend: React with Shadcn UI, black theme with #C1FF72 accent
-- Wallet: MetaMask (EVM) + Phantom (Solana) support via window.ethereum/solana
+- Wallet: MetaMask (EVM) + Phantom (Solana) support
 - Features: Swap card, token selection modal, transaction history
+
+### Jan 12, 2026 - Iteration 2 Fixes
+- Fixed horizontal scroll for chain filters (.chain-scroll CSS)
+- Performance optimization with memo() components
+- Real token/chain logos from LI.FI CDN
+- Solana chain support (chain ID: 1151111081099710)
+- Normalized token keys for consistent access
+- Fallback Solana tokens (SOL, USDC, USDT)
+- Removed console errors
 - Testing: 89% backend / 100% frontend tests passed
 
 ## Prioritized Backlog
 
 ### P0 (Critical) - DONE
 - ✅ Wallet connection
-- ✅ Token selection
+- ✅ Token selection with Solana support
 - ✅ Quote fetching
 - ✅ Transaction history
+- ✅ Real token/chain logos
+- ✅ Horizontal scroll fixes
 
 ### P1 (Important) - Remaining
 - [ ] Solana swap execution (currently shows "coming soon")
@@ -91,4 +102,3 @@ Build a Rhino.fi-style cross-chain swap web app using LI.FI APIs. Users must be 
 2. Add wallet balance fetching for connected tokens
 3. Add real-time LI.FI status polling for pending transactions
 4. Add slippage tolerance settings
-5. Consider adding price charts for tokens
