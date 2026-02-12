@@ -25,11 +25,6 @@
         --border: 0 0% 50%;
         --input: 0 0% 7%;
         --ring: 82 100% 72%;
-        --chart-1: 82 100% 72%;
-        --chart-2: 160 60% 45%;
-        --chart-3: 30 80% 55%;
-        --chart-4: 280 65% 60%;
-        --chart-5: 340 75% 55%;
         --radius: 10px;
     }
 }
@@ -40,6 +35,7 @@
 
 html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
 }
 
 body {
@@ -79,6 +75,7 @@ h1, h2, h3, h4, h5, h6 {
 
 ::-webkit-scrollbar-track {
     background: #111111;
+    border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -90,8 +87,8 @@ h1, h2, h3, h4, h5, h6 {
     background: #555555;
 }
 
-/* Horizontal chain selector - FIXED */
-.chain-scroll-container {
+/* FIXED: Horizontal chain scroll */
+.chain-scroll-wrapper {
     position: relative;
     width: 100%;
     overflow: hidden;
@@ -99,22 +96,21 @@ h1, h2, h3, h4, h5, h6 {
 
 .chain-scroll {
     display: flex;
-    gap: 8px;
-    padding-bottom: 8px;
+    gap: 6px;
+    padding: 4px 0 8px 0;
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
     scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
-    cursor: grab;
-    user-select: none;
+    scrollbar-color: #444 transparent;
     width: 100%;
     flex-wrap: nowrap;
+    cursor: grab;
 }
 
-.chain-scroll:hover {
-    scrollbar-color: #444444 transparent;
+.chain-scroll:active {
+    cursor: grabbing;
 }
 
 .chain-scroll::-webkit-scrollbar {
@@ -123,26 +119,20 @@ h1, h2, h3, h4, h5, h6 {
 
 .chain-scroll::-webkit-scrollbar-track {
     background: transparent;
-    border-radius: 2px;
 }
 
 .chain-scroll::-webkit-scrollbar-thumb {
-    background: transparent;
+    background: #333;
     border-radius: 2px;
-    transition: background 0.2s ease;
 }
 
 .chain-scroll:hover::-webkit-scrollbar-thumb {
-    background: #444444;
+    background: #555;
 }
 
-.chain-scroll:active {
-    cursor: grabbing;
-}
-
-/* Chain filter button - prevent shrinking */
-.chain-filter-btn {
-    flex-shrink: 0;
+/* Chain button - no shrink */
+.chain-btn {
+    flex: 0 0 auto;
     white-space: nowrap;
 }
 
@@ -159,114 +149,97 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Animations */
-@keyframes pulse-glow {
-    0%, 100% {
-        box-shadow: 0 0 20px rgba(193, 255, 114, 0.1);
-    }
-    50% {
-        box-shadow: 0 0 30px rgba(193, 255, 114, 0.2);
-    }
-}
-
 @keyframes fade-in {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes spin-slow {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-.animate-pulse-glow {
-    animation: pulse-glow 2s ease-in-out infinite;
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 .animate-fade-in {
-    animation: fade-in 0.3s ease-out forwards;
+    animation: fade-in 0.2s ease-out forwards;
 }
 
 .animate-spin-slow {
     animation: spin-slow 2s linear infinite;
 }
 
-/* Glass effect for header */
+/* Glass header */
 .glass-header {
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.85);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Token row hover */
+/* Token row */
 .token-row {
-    transition: background-color 0.15s ease;
+    transition: background-color 0.1s ease;
+    will-change: background-color;
 }
 
 .token-row:hover {
     background-color: rgba(193, 255, 114, 0.05);
 }
 
-/* Responsive modal fixes */
-@media (max-width: 640px) {
-    .swap-card {
-        padding: 16px !important;
-        margin: 0 8px;
-        max-width: calc(100vw - 16px) !important;
-    }
-    
-    .token-selector {
-        padding: 6px 10px !important;
-    }
-    
-    .swap-input {
-        font-size: 20px !important;
-        height: 48px !important;
-    }
+/* Status badges */
+.status-pending {
+    background-color: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
 }
 
-/* Modal responsive */
-[role="dialog"] {
+.status-success {
+    background-color: rgba(193, 255, 114, 0.2);
+    color: #C1FF72;
+}
+
+.status-failed {
+    background-color: rgba(231, 76, 60, 0.2);
+    color: #E74C3C;
+}
+
+/* FIXED: Modal responsive */
+[role="dialog"] > div {
+    max-width: calc(100vw - 16px) !important;
     max-height: calc(100vh - 32px) !important;
     max-height: calc(100dvh - 32px) !important;
-    overflow: hidden;
 }
 
-[role="dialog"] > div {
-    max-height: inherit;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+/* FIXED: Swap card responsive */
+.swap-card {
+    width: 100%;
+    max-width: 100%;
 }
 
-/* Token list virtualization helper */
-.token-list-container {
-    contain: layout style;
+@media (min-width: 480px) {
+    .swap-card {
+        max-width: 440px;
+    }
 }
 
+/* Performance: contain */
 .token-list-item {
     contain: layout style;
 }
 
-/* Prevent layout shift */
-.chain-icon-placeholder {
-    width: 16px;
-    height: 16px;
-    min-width: 16px;
-    min-height: 16px;
+/* Environment badge */
+.env-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
 }
 
-/* Debug wrapper fix */
-[data-debug-wrapper="true"] {
-    display: contents !important;
+.env-mainnet {
+    background: rgba(193, 255, 114, 0.2);
+    color: #C1FF72;
+}
+
+.env-testnet {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
 }
