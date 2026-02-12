@@ -1,155 +1,115 @@
 import { useState, useCallback, memo } from 'react';
 import { useWalletStore } from '../store/walletStore';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from './ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 import { Loader2, AlertCircle, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 
-const WalletOption = memo(({ 
-  name, 
-  description, 
-  logoUrl, 
-  onClick, 
-  isConnecting, 
-  disabled,
-  testId 
-}) => (
+const WalletBtn = memo(({ name, desc, logo, onClick, loading, disabled, testId }) => (
   <Button
     onClick={onClick}
     disabled={disabled}
-    className="w-full h-14 rounded-[10px] bg-[#111] border border-white/10 hover:border-white/30 hover:bg-[#1a1a1a] text-white justify-start gap-4 transition-colors"
     variant="ghost"
+    className="w-full h-14 rounded-lg bg-[#111] border border-white/10 hover:border-white/30 hover:bg-[#1a1a1a] text-white justify-start gap-3"
     data-testid={testId}
   >
-    {isConnecting ? (
-      <Loader2 className="w-8 h-8 animate-spin" />
-    ) : logoUrl ? (
-      <img src={logoUrl} alt={name} className="w-8 h-8 rounded-lg" onError={(e) => { e.target.style.display = 'none'; }} />
+    {loading ? (
+      <Loader2 className="w-7 h-7 animate-spin" />
+    ) : logo ? (
+      <img src={logo} alt={name} className="w-7 h-7 rounded-lg" onError={(e) => e.target.style.display = 'none'} />
     ) : (
-      <div className="w-8 h-8 rounded-lg bg-[#333] flex items-center justify-center">
-        <Wallet className="w-5 h-5 text-white" />
+      <div className="w-7 h-7 rounded-lg bg-[#333] flex items-center justify-center">
+        <Wallet className="w-4 h-4" />
       </div>
     )}
-    <div className="flex flex-col items-start">
-      <span className="font-semibold text-sm sm:text-base">{name}</span>
-      <span className="text-xs text-gray-500">{description}</span>
+    <div className="text-left">
+      <div className="font-semibold text-sm">{name}</div>
+      <div className="text-xs text-gray-500">{desc}</div>
     </div>
   </Button>
 ));
-
-WalletOption.displayName = 'WalletOption';
+WalletBtn.displayName = 'WalletBtn';
 
 export const WalletModal = memo(() => {
-  const { 
-    showWalletModal, 
-    setShowWalletModal,
-    connectMetaMask,
-    connectTrustWallet,
-    connectPhantom,
-    connectTron,
-    evmConnecting,
-    solanaConnecting,
-    tronConnecting,
-  } = useWalletStore();
-
+  const { showWalletModal, setShowWalletModal, connectMetaMask, connectTrustWallet, connectPhantom, connectTron, evmConnecting, solanaConnecting, tronConnecting } = useWalletStore();
   const [error, setError] = useState(null);
 
-  const handleConnect = useCallback(async (connectFn, walletName) => {
+  const connect = useCallback(async (fn, name) => {
     setError(null);
     try {
-      await connectFn();
-      toast.success(`${walletName} connected successfully`);
+      await fn();
+      toast.success(`${name} connected`);
       setShowWalletModal(false);
     } catch (err) {
-      console.error(`${walletName} connection error:`, err);
-      if (err.code === 4001) {
-        setError('Connection rejected. Please try again.');
-      } else if (err.message?.includes('not installed')) {
-        setError(err.message);
-      } else {
-        setError(err.message || `Failed to connect ${walletName}`);
-      }
+      if (err.code === 4001) setError('Connection rejected');
+      else setError(err.message || `Failed to connect ${name}`);
     }
   }, [setShowWalletModal]);
 
-  const isConnecting = evmConnecting || solanaConnecting || tronConnecting;
+  const busy = evmConnecting || solanaConnecting || tronConnecting;
 
   return (
     <Dialog open={showWalletModal} onOpenChange={setShowWalletModal}>
-      <DialogContent className="w-[95vw] max-w-[400px] bg-[#0a0a0a] border-white/20 rounded-[10px] p-0 overflow-hidden">
-        <DialogHeader className="p-4 sm:p-6 pb-0">
-          <DialogTitle className="text-lg sm:text-xl font-bold text-white">
-            Connect Wallet
-          </DialogTitle>
-          <p className="text-xs sm:text-sm text-gray-400 mt-2">
-            Choose your preferred wallet
-          </p>
+      <DialogContent className="w-[95vw] max-w-[380px] bg-[#0a0a0a] border-white/20 rounded-xl p-0">
+        <DialogHeader className="p-4 sm:p-5 pb-0">
+          <DialogTitle className="text-lg font-bold text-white">Connect Wallet</DialogTitle>
+          <p className="text-xs text-gray-400 mt-1">Choose your wallet</p>
         </DialogHeader>
 
-        <div className="p-4 sm:p-6 space-y-2 sm:space-y-3">
+        <div className="p-4 sm:p-5 space-y-2">
           {error && (
-            <div className="flex items-start gap-2 p-3 bg-[#E74C3C]/10 border border-[#E74C3C]/20 rounded-[10px] text-[#E74C3C] text-xs sm:text-sm">
+            <div className="flex items-start gap-2 p-2.5 bg-[#E74C3C]/10 border border-[#E74C3C]/20 rounded-lg text-xs text-[#E74C3C]">
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
-          {/* MetaMask */}
-          <WalletOption
+          <WalletBtn
             name="MetaMask"
-            description="Popular browser wallet"
-            logoUrl="https://raw.githubusercontent.com/MetaMask/brand-resources/master/SVG/SVG_MetaMask_Icon_Color.svg"
-            onClick={() => handleConnect(connectMetaMask, 'MetaMask')}
-            isConnecting={evmConnecting}
-            disabled={isConnecting}
-            testId="metamask-connect-btn"
+            desc="EVM chains"
+            logo="https://raw.githubusercontent.com/MetaMask/brand-resources/master/SVG/SVG_MetaMask_Icon_Color.svg"
+            onClick={() => connect(connectMetaMask, 'MetaMask')}
+            loading={evmConnecting}
+            disabled={busy}
+            testId="metamask-btn"
           />
-
-          {/* Trust Wallet */}
-          <WalletOption
+          
+          <WalletBtn
             name="Trust Wallet"
-            description="Multi-chain mobile wallet"
-            logoUrl="https://trustwallet.com/assets/images/media/assets/TWT.svg"
-            onClick={() => handleConnect(connectTrustWallet, 'Trust Wallet')}
-            isConnecting={evmConnecting}
-            disabled={isConnecting}
-            testId="trustwallet-connect-btn"
+            desc="Multi-chain"
+            logo="https://trustwallet.com/assets/images/media/assets/TWT.svg"
+            onClick={() => connect(connectTrustWallet, 'Trust Wallet')}
+            loading={evmConnecting}
+            disabled={busy}
+            testId="trust-btn"
           />
-
-          {/* Phantom */}
-          <WalletOption
+          
+          <WalletBtn
             name="Phantom"
-            description="Solana wallet"
-            logoUrl="https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/solana.svg"
-            onClick={() => handleConnect(connectPhantom, 'Phantom')}
-            isConnecting={solanaConnecting}
-            disabled={isConnecting}
-            testId="phantom-connect-btn"
+            desc="Solana"
+            logo="https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/solana.svg"
+            onClick={() => connect(connectPhantom, 'Phantom')}
+            loading={solanaConnecting}
+            disabled={busy}
+            testId="phantom-btn"
           />
-
-          {/* TronLink */}
-          <WalletOption
+          
+          <WalletBtn
             name="TronLink"
-            description="Tron wallet"
-            logoUrl="https://cryptologos.cc/logos/tron-trx-logo.svg"
-            onClick={() => handleConnect(connectTron, 'TronLink')}
-            isConnecting={tronConnecting}
-            disabled={isConnecting}
-            testId="tronlink-connect-btn"
+            desc="Tron"
+            logo="https://s2.coinmarketcap.com/static/img/coins/64x64/1958.png"
+            onClick={() => connect(connectTron, 'TronLink')}
+            loading={tronConnecting}
+            disabled={busy}
+            testId="tron-btn"
           />
-
-          <p className="text-[10px] sm:text-xs text-gray-500 text-center pt-2">
-            By connecting, you agree to our Terms of Service
+          
+          <p className="text-[10px] text-gray-600 text-center pt-2">
+            By connecting, you agree to our Terms
           </p>
         </div>
       </DialogContent>
     </Dialog>
   );
 });
-
 WalletModal.displayName = 'WalletModal';
