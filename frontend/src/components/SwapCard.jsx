@@ -197,18 +197,31 @@ export const SwapCard = memo(({ onTxComplete }) => {
     }
   }, [quote, address, fromToken, toToken, amountWei, evmConnected, clearQuote, onTxComplete]);
 
+  // Check if this is a TRON source swap (needs special handling)
+  const isTronSourceSwap = fromToken?.chainId === TRON_CHAIN_ID;
+  
+  const handleTronSwap = useCallback(() => {
+    setShowTronSwap(true);
+  }, []);
+
   const btnState = useMemo(() => {
     if (!connected) return { text: 'Connect Wallet', disabled: false, action: () => setShowWalletModal(true) };
     if (!fromToken) return { text: 'Select token', disabled: true };
     if (!toToken) return { text: 'Select token', disabled: true };
     if (!amount || parseFloat(amount) <= 0) return { text: 'Enter amount', disabled: true };
     if (!bothSupported) return { text: 'Chain not supported', disabled: true };
+    
+    // TRON source swaps use special flow
+    if (isTronSourceSwap) {
+      return { text: 'Start TRON Swap', disabled: false, action: handleTronSwap, isTron: true };
+    }
+    
     if (quoteLoading) return { text: 'Getting quote...', disabled: true };
     if (quoteError) return { text: 'Route unavailable', disabled: true };
     if (!quote) return { text: 'Getting quote...', disabled: true };
     if (swapping) return { text: 'Swapping...', disabled: true };
     return { text: 'Swap', disabled: false, action: handleSwap };
-  }, [connected, fromToken, toToken, amount, bothSupported, quoteLoading, quoteError, quote, swapping, handleSwap, setShowWalletModal]);
+  }, [connected, fromToken, toToken, amount, bothSupported, isTronSourceSwap, quoteLoading, quoteError, quote, swapping, handleSwap, handleTronSwap, setShowWalletModal]);
 
   return (
     <>
