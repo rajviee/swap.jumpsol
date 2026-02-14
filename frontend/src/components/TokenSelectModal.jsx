@@ -321,8 +321,9 @@ export const TokenSelectModal = memo(({
           </div>
 
           {/* Available Tokens Label */}
-          <div className="px-4 sm:px-5 pb-2 flex-shrink-0">
+          <div className="px-4 sm:px-5 pb-2 flex-shrink-0 flex items-center justify-between">
             <span className="text-sm text-gray-400">Available tokens</span>
+            <span className="text-xs text-gray-500">{chainTokens.length} tokens</span>
           </div>
 
           {/* Token List */}
