@@ -284,6 +284,153 @@ async def get_transaction(tx_id: str):
     return tx
 
 
+# ============ TRON Bridge Endpoints ============
+
+from tron_bridge import TronSwapOrchestrator, TronSwapOrder, SwapState
+
+# Initialize TRON orchestrator
+tron_orchestrator = None
+
+async def get_tron_orchestrator():
+    global tron_orchestrator
+    if tron_orchestrator is None:
+        tron_orchestrator = TronSwapOrchestrator(db)
+    return tron_orchestrator
+
+
+class TronSwapRequest(BaseModel):
+    from_token: str = Field(..., description="TRX or USDT")
+    to_chain: str = Field(..., description="SOL, ETH, ARB, etc.")
+    to_token: str = Field(..., description="USDC, SOL, ETH, etc.")
+    to_address: str = Field(..., description="Destination wallet address")
+    user_address: str = Field(..., description="User identifier")
+
+
+class TronSwapEstimateRequest(BaseModel):
+    from_token: str = Field(..., description="TRX or USDT")
+    from_amount: float = Field(..., gt=0, description="Amount to swap")
+    to_chain: str = Field(..., description="Destination chain")
+    to_token: str = Field(..., description="Destination token")
+
+
+@api_router.post("/tron/swap/create")
+async def create_tron_swap(request: TronSwapRequest):
+    """Create a new TRON swap order and generate deposit address"""
+    try:
+        orchestrator = await get_tron_orchestrator()
+        order = await orchestrator.create_swap_order(
+            from_token=request.from_token,
+            to_chain=request.to_chain,
+            to_token=request.to_token,
+            to_address=request.to_address,
+            user_address=request.user_address
+        )
+        
+        # Return order details with deposit address
+        return {
+            "order_id": order.id,
+            "deposit_address": order.deposit_address,
+            "from_token": order.from_token,
+            "to_chain": order.to_chain,
+            "to_token": order.to_token,
+            "to_address": order.to_address,
+            "state": order.state,
+            "estimated_time_minutes": order.estimated_time_minutes,
+            "created_at": order.created_at.isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Failed to create TRON swap: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/tron/swap/estimate")
+async def estimate_tron_swap(request: TronSwapEstimateRequest):
+    """Get swap estimate with fees and steps breakdown"""
+    try:
+        orchestrator = await get_tron_orchestrator()
+        estimate = await orchestrator.get_swap_estimate(
+            from_token=request.from_token,
+            from_amount=request.from_amount,
+            to_chain=request.to_chain,
+            to_token=request.to_token
+        )
+        return estimate
+    except Exception as e:
+        logger.error(f"Failed to estimate TRON swap: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/tron/swap/{order_id}")
+async def get_tron_swap_status(order_id: str):
+    """Get swap order status and progress"""
+    try:
+        orchestrator = await get_tron_orchestrator()
+        status = await orchestrator.get_order_status(order_id)
+        
+        if not status:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        return status
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get TRON swap status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/tron/swap/{order_id}/check-deposit")
+async def check_tron_deposit(order_id: str):
+    """Check if deposit has been received for an order"""
+    try:
+        orchestrator = await get_tron_orchestrator()
+        result = await orchestrator.check_deposit(order_id)
+        
+        if result is None:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to check TRON deposit: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/tron/swap/{order_id}/process")
+async def process_tron_swap(order_id: str):
+    """Process swap to next state"""
+    try:
+        orchestrator = await get_tron_orchestrator()
+        result = await orchestrator.process_order(order_id)
+        return result
+    except Exception as e:
+        logger.error(f"Failed to process TRON swap: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/tron/orders")
+async def get_tron_orders(
+    user_address: str,
+    state: Optional[str] = None,
+    limit: int = 50
+):
+    """Get all TRON swap orders for a user"""
+    try:
+        query: Dict[str, Any] = {"user_address": user_address}
+        if state:
+            query["state"] = state
+        
+        orders = await db.tron_swap_orders.find(
+            query,
+            {"_id": 0, "deposit_private_key_encrypted": 0, "deposit_nonce": 0}
+        ).sort("created_at", -1).limit(limit).to_list(limit)
+        
+        return {"orders": orders, "total": len(orders)}
+    except Exception as e:
+        logger.error(f"Failed to get TRON orders: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============ Health Check ============
 
 @api_router.get("/health")
