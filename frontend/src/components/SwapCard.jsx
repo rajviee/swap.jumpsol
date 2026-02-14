@@ -204,12 +204,13 @@ export const SwapCard = memo(({ onTxComplete }) => {
     if (!toToken) return { text: 'Select token', disabled: true };
     if (!amount || parseFloat(amount) <= 0) return { text: 'Enter amount', disabled: true };
     if (!bothSupported) return { text: 'Chain not supported', disabled: true };
+    if (hasBridgeRequirement) return { text: 'Bridge coming soon', disabled: true };
     if (quoteLoading) return { text: 'Getting quote...', disabled: true };
     if (quoteError) return { text: 'Route unavailable', disabled: true };
     if (!quote) return { text: 'Getting quote...', disabled: true };
     if (swapping) return { text: 'Swapping...', disabled: true };
     return { text: 'Swap', disabled: false, action: handleSwap };
-  }, [connected, fromToken, toToken, amount, bothSupported, quoteLoading, quoteError, quote, swapping, handleSwap, setShowWalletModal]);
+  }, [connected, fromToken, toToken, amount, bothSupported, hasBridgeRequirement, quoteLoading, quoteError, quote, swapping, handleSwap, setShowWalletModal]);
 
   return (
     <>
