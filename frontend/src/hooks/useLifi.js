@@ -187,11 +187,8 @@ export function useQuote() {
       return null;
     }
     
-    // Special handling for Tron - it requires bridge routes
-    if (requiresBridge(fromChain) || requiresBridge(toChain)) {
-      setError('Tron swaps require using wrapped tokens. This feature is coming soon.');
-      return null;
-    }
+    // Note: Tron requires bridge routes but we allow the quote attempt
+    // LI.FI may find routes via wrapped tokens on other chains
     
     setLoading(true);
     setError(null);
