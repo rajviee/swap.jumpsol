@@ -143,6 +143,7 @@ export const TokenSelectModal = memo(({
 
   const chainInfo = useCallback((id) => CHAIN_INFO[id] || {}, []);
   const unsupported = !isSwapSupported(activeChain);
+  const needsBridge = requiresBridge(activeChain);
 
   // Drag scroll handlers
   const onMouseDown = (e) => {
