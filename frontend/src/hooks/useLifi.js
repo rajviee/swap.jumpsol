@@ -184,9 +184,10 @@ export function useQuote() {
   const [quote, setQuote] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [provider, setProvider] = useState(null);
 
   const fetchQuote = useCallback(async (params) => {
-    const { fromChain, toChain, fromToken, toToken, fromAmount, fromAddress } = params;
+    const { fromChain, toChain, fromToken, toToken, fromAmount, fromAddress, toAddress } = params;
     
     if (!fromChain || !toChain || !fromToken || !toToken || !fromAmount || !fromAddress) {
       setQuote(null);
@@ -204,16 +205,70 @@ export function useQuote() {
       return null;
     }
     
-    // Note: Tron requires bridge routes but we allow the quote attempt
-    // LI.FI may find routes via wrapped tokens on other chains
-    
     setLoading(true);
     setError(null);
     
     try {
-      const data = await lifiApi.getQuote(params);
-      setQuote(data);
-      return data;
+      // Check if this is a Tron route - use Rhino.fi
+      const isTronRoute = fromChain === TRON_CHAIN_ID || toChain === TRON_CHAIN_ID;
+      
+      if (isTronRoute) {
+        // Use Rhino.fi bridge API
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/bridge/quote`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from_chain: String(fromChain),
+            to_chain: String(toChain),
+            from_token: fromToken,
+            to_token: toToken,
+            amount: fromAmount,
+            from_address: fromAddress,
+            to_address: toAddress || fromAddress
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.supported === false) {
+          setError(data.error || 'Route not supported by Rhino.fi');
+          setQuote(null);
+          setProvider('rhino');
+          return null;
+        }
+        
+        // Transform Rhino quote to unified format
+        const unifiedQuote = {
+          provider: 'rhino',
+          quoteId: data.quote_id,
+          fromChain: data.from_chain,
+          toChain: data.to_chain,
+          fromToken: data.from_token,
+          toToken: data.to_token,
+          fromAmount: data.from_amount,
+          toAmount: data.to_amount,
+          fromAmountUSD: data.from_amount_usd,
+          toAmountUSD: data.to_amount_usd,
+          gasCostUSD: data.gas_fee_usd,
+          feeCostUSD: data.fee_usd,
+          estimatedTime: data.estimated_time_seconds,
+          raw: data
+        };
+        
+        setQuote(unifiedQuote);
+        setProvider('rhino');
+        return unifiedQuote;
+      } else {
+        // Use LI.FI for non-Tron routes
+        const data = await lifiApi.getQuote(params);
+        const unifiedQuote = {
+          provider: 'lifi',
+          ...data
+        };
+        setQuote(unifiedQuote);
+        setProvider('lifi');
+        return unifiedQuote;
+      }
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Quote failed';
       setError(msg);
@@ -227,9 +282,10 @@ export function useQuote() {
   const clearQuote = useCallback(() => {
     setQuote(null);
     setError(null);
+    setProvider(null);
   }, []);
 
-  return { quote, loading, error, fetchQuote, clearQuote };
+  return { quote, loading, error, provider, fetchQuote, clearQuote };
 }
 
 // Balance fetching
