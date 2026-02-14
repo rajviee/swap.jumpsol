@@ -250,7 +250,26 @@ export const TokenSelectModal = memo(({
     return selectedToken?.address?.toLowerCase() === token.address?.toLowerCase() && selectedToken?.chainId === activeChain;
   }, [selectedToken, activeChain]);
 
-  const chainInfo = useCallback((id) => CHAIN_INFO[id] || {}, []);
+  // Get chain info - merge API data with our static info
+  const chainInfo = useCallback((id) => {
+    // First check our static CHAIN_INFO
+    const staticInfo = CHAIN_INFO[id];
+    
+    // Then find from API chains for logo URL
+    const apiChain = sortedChains.find(c => c.id === id);
+    
+    if (staticInfo && apiChain?.logoURI) {
+      return { ...staticInfo, logo: apiChain.logoURI };
+    }
+    if (apiChain?.logoURI) {
+      return { 
+        name: apiChain.name || apiChain.key, 
+        logo: apiChain.logoURI,
+        color: '#666'
+      };
+    }
+    return staticInfo || { name: `Chain ${id}`, color: '#666' };
+  }, [sortedChains]);
 
   return (
     <>
