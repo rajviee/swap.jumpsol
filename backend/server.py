@@ -431,6 +431,126 @@ async def get_tron_orders(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ============ Rhino.fi Bridge Endpoints ============
+
+from rhino_bridge import bridge_router, RhinoService
+
+# Initialize services
+rhino_service = RhinoService()
+
+
+class BridgeQuoteRequest(BaseModel):
+    from_chain: str = Field(..., description="Source chain (e.g., 'TRON', '1', '728126428')")
+    to_chain: str = Field(..., description="Destination chain (e.g., 'SOLANA', '1151111081099710')")
+    from_token: str = Field(..., description="Source token symbol (e.g., 'USDT')")
+    to_token: str = Field(..., description="Destination token symbol (e.g., 'USDC')")
+    amount: str = Field(..., description="Amount to bridge (human readable)")
+    from_address: str = Field(..., description="Source wallet address")
+    to_address: str = Field(..., description="Destination wallet address")
+
+
+@api_router.post("/bridge/quote")
+async def get_bridge_quote(request: BridgeQuoteRequest):
+    """
+    Get a bridge quote using the appropriate provider.
+    Routes to Rhino.fi for Tron routes, LI.FI for everything else.
+    """
+    try:
+        # Determine provider
+        provider = bridge_router.get_provider_for_route(request.from_chain, request.to_chain)
+        logger.info(f"Bridge quote request: {request.from_chain}/{request.from_token} -> {request.to_chain}/{request.to_token} (provider: {provider})")
+        
+        if provider == "rhino":
+            # Use Rhino.fi for Tron routes
+            quote = await bridge_router.get_quote(
+                request.from_chain,
+                request.to_chain,
+                request.from_token,
+                request.to_token,
+                request.amount,
+                request.from_address,
+                request.to_address
+            )
+            return quote
+        else:
+            # Use existing LI.FI flow
+            return {
+                "provider": "lifi",
+                "use_existing_endpoint": True,
+                "message": "Use /api/lifi/quote for non-Tron routes",
+                "params": {
+                    "fromChain": request.from_chain,
+                    "toChain": request.to_chain,
+                    "fromToken": request.from_token,
+                    "toToken": request.to_token,
+                    "fromAmount": request.amount,
+                    "fromAddress": request.from_address
+                }
+            }
+    except Exception as e:
+        logger.error(f"Bridge quote error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/bridge/configs")
+async def get_bridge_configs():
+    """Get Rhino.fi bridge configurations (supported chains/tokens)"""
+    try:
+        configs = await rhino_service.get_bridge_configs()
+        swap_configs = await rhino_service.get_swap_configs()
+        
+        return {
+            "bridge_configs": configs,
+            "swap_configs": swap_configs,
+            "supported_chains": list(configs.keys()) if configs else []
+        }
+    except Exception as e:
+        logger.error(f"Failed to get bridge configs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/bridge/commit/{quote_id}")
+async def commit_bridge_quote(quote_id: str):
+    """Commit a Rhino.fi quote to prepare for execution"""
+    try:
+        result = await rhino_service.commit_quote(quote_id)
+        if not result:
+            raise HTTPException(status_code=400, detail="Failed to commit quote")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to commit bridge quote: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/bridge/status/{quote_id}")
+async def get_bridge_status(quote_id: str):
+    """Get status of a Rhino.fi bridge transaction"""
+    try:
+        status = await rhino_service.get_transaction_status(quote_id)
+        if not status:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+        return status
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get bridge status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/bridge/provider")
+async def get_provider_for_route(from_chain: str, to_chain: str):
+    """Determine which provider will be used for a route"""
+    provider = bridge_router.get_provider_for_route(from_chain, to_chain)
+    return {
+        "from_chain": from_chain,
+        "to_chain": to_chain,
+        "provider": provider,
+        "description": "rhino" if provider == "rhino" else "lifi"
+    }
+
+
 # ============ Health Check ============
 
 @api_router.get("/health")
