@@ -1,70 +1,118 @@
-import { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { Dialog, DialogContent } from './ui/dialog';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { Skeleton } from './ui/skeleton';
-import { Search, X, Check, AlertTriangle } from 'lucide-react';
-import { CHAIN_INFO, PRIORITY_CHAINS, FALLBACK_TOKENS, isSwapSupported, requiresBridge, formatTokenAmount, SOLANA_CHAIN_ID, TRON_CHAIN_ID, BITCOIN_CHAIN_ID } from '../hooks/useLifi';
+import { Search, X, ChevronRight } from 'lucide-react';
+import { CHAIN_INFO, PRIORITY_CHAINS, FALLBACK_TOKENS, isSwapSupported, formatTokenAmount, SOLANA_CHAIN_ID, TRON_CHAIN_ID, BITCOIN_CHAIN_ID } from '../hooks/useLifi';
 
-// Token Row - memoized for performance
-const TokenRow = memo(({ token, chainId, isSelected, onSelect, chainInfo, unsupported }) => {
+// Token Row - displays token with balance
+const TokenRow = memo(({ token, chainId, isSelected, onSelect, chainInfo }) => {
   const [imgErr, setImgErr] = useState(false);
   const logo = token.logoURI || token.logo;
   
   return (
     <button
       onClick={() => onSelect(token)}
-      className={`w-full flex items-center gap-3 p-2.5 sm:p-3 rounded-lg token-row ${isSelected ? 'bg-[#C1FF72]/10 ring-1 ring-[#C1FF72]/40' : ''} ${unsupported ? 'opacity-60' : ''}`}
+      className={`w-full flex items-center gap-3 p-3 sm:p-4 rounded-xl transition-colors ${
+        isSelected ? 'bg-[#C1FF72]/15 ring-1 ring-[#C1FF72]/40' : 'hover:bg-white/5'
+      }`}
       data-testid={`token-${token.symbol}`}
     >
       <div className="relative flex-shrink-0">
         {logo && !imgErr ? (
-          <img src={logo} alt="" className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#222]" onError={() => setImgErr(true)} loading="lazy" />
+          <img src={logo} alt="" className="w-10 h-10 rounded-full bg-[#222]" onError={() => setImgErr(true)} loading="lazy" />
         ) : (
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#333] flex items-center justify-center text-white font-bold text-sm">
+          <div className="w-10 h-10 rounded-full bg-[#333] flex items-center justify-center text-white font-bold text-sm">
             {token.symbol?.[0] || '?'}
           </div>
         )}
-        {chainInfo?.logo && (
-          <img src={chainInfo.logo} alt="" className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border border-[#0a0a0a]" />
-        )}
       </div>
       <div className="flex-1 min-w-0 text-left">
-        <div className="flex items-center gap-1.5">
-          <span className="font-semibold text-white text-sm truncate">{token.symbol}</span>
-          {isSelected && <Check className="w-3.5 h-3.5 text-[#C1FF72]" />}
-          {unsupported && <AlertTriangle className="w-3 h-3 text-yellow-500" />}
-        </div>
-        <div className="text-xs text-gray-500 truncate">{token.name}</div>
+        <div className="font-bold text-white text-base">{token.symbol}</div>
+        <div className="text-sm text-gray-400">{token.name || chainInfo?.name || ''}</div>
+      </div>
+      <div className="text-right flex-shrink-0">
+        <span className="text-base text-gray-400">0 {token.symbol}</span>
       </div>
     </button>
   );
 });
 TokenRow.displayName = 'TokenRow';
 
-// Chain Button - memoized
-const ChainBtn = memo(({ chain, active, onClick, info, unsupported, needsBridge }) => {
+// Chain Icon Button
+const ChainIcon = memo(({ chain, active, onClick, info }) => {
   const [imgErr, setImgErr] = useState(false);
   
   return (
     <button
       onClick={onClick}
-      className={`chain-btn flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-        active ? 'bg-[#C1FF72] text-black' : 'bg-[#111] text-gray-400 hover:bg-[#1a1a1a] hover:text-white'
-      } ${unsupported && !active ? 'border border-dashed border-red-600/50' : ''} ${needsBridge && !unsupported && !active ? 'border border-dashed border-yellow-600/50' : ''}`}
-      data-testid={`chain-${chain.id}`}
+      className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center transition-all flex-shrink-0 ${
+        active 
+          ? 'bg-[#C1FF72] ring-2 ring-[#C1FF72]' 
+          : 'bg-[#1a1a1a] border border-white/10 hover:border-white/30'
+      }`}
+      data-testid={`chain-icon-${chain.id}`}
+      title={chain.name}
     >
       {info?.logo && !imgErr ? (
-        <img src={info.logo} alt="" className="w-4 h-4 rounded-full" onError={() => setImgErr(true)} />
+        <img 
+          src={info.logo} 
+          alt={chain.name} 
+          className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full ${active ? '' : ''}`}
+          onError={() => setImgErr(true)} 
+        />
       ) : (
-        <div className="w-4 h-4 rounded-full" style={{ background: info?.color || '#666' }} />
+        <div 
+          className="w-7 h-7 sm:w-8 sm:h-8 rounded-full" 
+          style={{ background: info?.color || '#666' }} 
+        />
       )}
-      <span className="hidden xs:inline">{chain.name}</span>
-      <span className="xs:hidden">{(chain.name || '').slice(0, 4)}</span>
     </button>
   );
 });
-ChainBtn.displayName = 'ChainBtn';
+ChainIcon.displayName = 'ChainIcon';
+
+// View All Modal
+const ViewAllChainsModal = memo(({ open, onClose, chains, activeChain, onSelect, chainInfo }) => {
+  if (!open) return null;
+  
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="w-[95vw] max-w-[500px] max-h-[80vh] bg-[#0a0a0a] border-white/20 rounded-xl p-0">
+        <div className="p-4 border-b border-white/10 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-white">Select Chain</h3>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10">
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
+        <ScrollArea className="max-h-[60vh]">
+          <div className="p-4 grid grid-cols-4 sm:grid-cols-5 gap-3">
+            {chains.map(c => (
+              <button
+                key={c.id}
+                onClick={() => { onSelect(c.id); onClose(); }}
+                className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all ${
+                  activeChain === c.id 
+                    ? 'bg-[#C1FF72]/20 ring-1 ring-[#C1FF72]' 
+                    : 'bg-[#111] hover:bg-[#1a1a1a]'
+                }`}
+              >
+                {chainInfo(c.id)?.logo ? (
+                  <img src={chainInfo(c.id).logo} alt="" className="w-8 h-8 rounded-full" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full" style={{ background: chainInfo(c.id)?.color || '#666' }} />
+                )}
+                <span className="text-xs text-white truncate max-w-full">{c.name?.slice(0, 8)}</span>
+              </button>
+            ))}
+          </div>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+  );
+});
+ViewAllChainsModal.displayName = 'ViewAllChainsModal';
 
 export const TokenSelectModal = memo(({
   open,
@@ -74,15 +122,14 @@ export const TokenSelectModal = memo(({
   chains = [],
   selectedChainId,
   selectedToken,
-  title = 'Select Token',
+  title = 'Select token',
   loading = false,
   defaultChainId,
+  isFrom = true,
 }) => {
   const [search, setSearch] = useState('');
   const [activeChain, setActiveChain] = useState(defaultChainId || selectedChainId || 1);
-  const scrollRef = useRef(null);
-  const [dragging, setDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, scroll: 0 });
+  const [showAllChains, setShowAllChains] = useState(false);
 
   // Reset on open
   useEffect(() => {
@@ -92,13 +139,17 @@ export const TokenSelectModal = memo(({
     }
   }, [open, defaultChainId, selectedChainId, chains]);
 
-  // Sorted chains
+  // Sorted chains - priority first
   const sortedChains = useMemo(() => {
     const priority = chains.filter(c => PRIORITY_CHAINS.includes(c.id));
     const others = chains.filter(c => !PRIORITY_CHAINS.includes(c.id));
     priority.sort((a, b) => PRIORITY_CHAINS.indexOf(a.id) - PRIORITY_CHAINS.indexOf(b.id));
     return [...priority, ...others];
   }, [chains]);
+
+  // Display chains (first 6 for quick access)
+  const displayChains = useMemo(() => sortedChains.slice(0, 6), [sortedChains]);
+  const remainingCount = Math.max(0, sortedChains.length - 6);
 
   // Tokens for active chain
   const chainTokens = useMemo(() => {
@@ -119,17 +170,20 @@ export const TokenSelectModal = memo(({
     return list;
   }, [tokens, activeChain, search]);
 
-  // Sort: native first, then alphabetical (limited for perf)
+  // Sort: native first, then popular, then alphabetical
   const displayTokens = useMemo(() => {
     const sorted = [...chainTokens].sort((a, b) => {
       if (a.isNative) return -1;
       if (b.isNative) return 1;
-      const nativeSymbols = ['ETH', 'SOL', 'TRX', 'BTC', 'BNB', 'MATIC', 'AVAX'];
-      if (nativeSymbols.includes(a.symbol) && !nativeSymbols.includes(b.symbol)) return -1;
-      if (nativeSymbols.includes(b.symbol) && !nativeSymbols.includes(a.symbol)) return 1;
+      const nativeSymbols = ['ETH', 'SOL', 'TRX', 'BTC', 'BNB', 'MATIC', 'AVAX', 'USDC', 'USDT', 'DAI'];
+      const aIdx = nativeSymbols.indexOf(a.symbol);
+      const bIdx = nativeSymbols.indexOf(b.symbol);
+      if (aIdx !== -1 && bIdx === -1) return -1;
+      if (bIdx !== -1 && aIdx === -1) return 1;
+      if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
       return (a.symbol || '').localeCompare(b.symbol || '');
     });
-    return sorted.slice(0, 100); // Limit for performance
+    return sorted.slice(0, 100);
   }, [chainTokens]);
 
   const handleSelect = useCallback((token) => {
@@ -142,124 +196,132 @@ export const TokenSelectModal = memo(({
   }, [selectedToken, activeChain]);
 
   const chainInfo = useCallback((id) => CHAIN_INFO[id] || {}, []);
-  const unsupported = !isSwapSupported(activeChain);
-  const needsBridge = requiresBridge(activeChain);
-
-  // Drag scroll handlers
-  const onMouseDown = (e) => {
-    if (!scrollRef.current) return;
-    setDragging(true);
-    setDragStart({ x: e.pageX, scroll: scrollRef.current.scrollLeft });
-  };
-  const onMouseMove = (e) => {
-    if (!dragging || !scrollRef.current) return;
-    const dx = e.pageX - dragStart.x;
-    scrollRef.current.scrollLeft = dragStart.scroll - dx;
-  };
-  const onMouseUp = () => setDragging(false);
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] max-w-[420px] h-auto max-h-[85vh] bg-[#0a0a0a] border-white/20 rounded-xl p-0 flex flex-col overflow-hidden">
-        <DialogHeader className="p-3 sm:p-4 border-b border-white/10 flex-shrink-0">
-          <div className="flex items-center justify-between mb-3">
-            <DialogTitle className="text-base font-bold text-white">{title}</DialogTitle>
-            <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/5" data-testid="close-modal">
-              <X className="w-4 h-4 text-gray-400" />
+    <>
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="w-[95vw] max-w-[460px] h-auto max-h-[85vh] bg-[#0a0a0a] border-white/20 rounded-2xl p-0 flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="p-4 sm:p-5 flex items-center justify-between flex-shrink-0">
+            <h2 className="text-lg sm:text-xl font-bold text-white">
+              Select token ({isFrom ? 'From' : 'To'})
+            </h2>
+            <button 
+              onClick={onClose} 
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors" 
+              data-testid="close-modal"
+            >
+              <X className="w-5 h-5 text-gray-400" />
             </button>
           </div>
-          
-          {/* Search */}
-          <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search tokens..."
-              className="h-9 pl-9 bg-[#111] border-none rounded-lg text-sm placeholder:text-gray-600"
-              data-testid="token-search"
-            />
-          </div>
-          
-          {/* Chain scroll */}
-          <div className="chain-scroll-wrapper">
-            <div
-              ref={scrollRef}
-              className="chain-scroll"
-              onMouseDown={onMouseDown}
-              onMouseMove={onMouseMove}
-              onMouseUp={onMouseUp}
-              onMouseLeave={onMouseUp}
-            >
-              {sortedChains.slice(0, 12).map(c => (
-                <ChainBtn
+
+          {/* Chain Filter Section */}
+          <div className="px-4 sm:px-5 pb-4 flex-shrink-0">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-gray-400">Filter by chain</span>
+              <button 
+                onClick={() => setShowAllChains(true)}
+                className="flex items-center gap-1 text-sm text-[#C1FF72] hover:text-[#d4ff9e] transition-colors"
+                data-testid="view-all-chains"
+              >
+                View all <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+            
+            {/* Chain Icons Row */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {displayChains.map(c => (
+                <ChainIcon
                   key={c.id}
                   chain={c}
                   active={activeChain === c.id}
                   onClick={() => setActiveChain(c.id)}
                   info={chainInfo(c.id)}
-                  unsupported={!isSwapSupported(c.id)}
-                  needsBridge={requiresBridge(c.id)}
                 />
               ))}
+              {remainingCount > 0 && (
+                <button
+                  onClick={() => setShowAllChains(true)}
+                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-[#1a1a1a] border border-white/10 hover:border-white/30 flex items-center justify-center transition-all flex-shrink-0"
+                  data-testid="more-chains-btn"
+                >
+                  <span className="text-sm font-medium text-gray-400">+{remainingCount}</span>
+                </button>
+              )}
             </div>
           </div>
-        </DialogHeader>
 
-        {/* Unsupported/Bridge warning */}
-        {unsupported && (
-          <div className="mx-3 sm:mx-4 mt-2 p-2 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-red-500" />
-            <span className="text-xs text-red-500">{chainInfo(activeChain).name} is not supported</span>
+          {/* Search Input */}
+          <div className="px-4 sm:px-5 pb-4 flex-shrink-0">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search for token..."
+                className="h-12 pl-12 bg-[#111] border-white/10 rounded-xl text-base placeholder:text-gray-500 focus:border-[#C1FF72]/50 focus:ring-[#C1FF72]/20"
+                data-testid="token-search"
+              />
+            </div>
           </div>
-        )}
-        {!unsupported && needsBridge && (
-          <div className="mx-3 sm:mx-4 mt-2 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-yellow-500" />
-            <span className="text-xs text-yellow-500">{chainInfo(activeChain).name} requires bridge routing - coming soon</span>
-          </div>
-        )}
 
-        {/* Token list */}
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="p-2">
-            {loading ? (
-              Array(5).fill(0).map((_, i) => (
-                <div key={i} className="flex items-center gap-3 p-3">
-                  <Skeleton className="w-9 h-9 rounded-full bg-[#222]" />
-                  <div className="flex-1">
-                    <Skeleton className="h-4 w-16 mb-1 bg-[#222]" />
-                    <Skeleton className="h-3 w-24 bg-[#222]" />
+          {/* Available Tokens Label */}
+          <div className="px-4 sm:px-5 pb-2 flex-shrink-0">
+            <span className="text-sm text-gray-400">Available tokens</span>
+          </div>
+
+          {/* Token List */}
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="px-2 sm:px-3 pb-4">
+              {loading ? (
+                Array(5).fill(0).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 p-4">
+                    <Skeleton className="w-10 h-10 rounded-full bg-[#222]" />
+                    <div className="flex-1">
+                      <Skeleton className="h-4 w-20 mb-2 bg-[#222]" />
+                      <Skeleton className="h-3 w-32 bg-[#222]" />
+                    </div>
+                    <Skeleton className="h-4 w-16 bg-[#222]" />
                   </div>
+                ))
+              ) : displayTokens.length === 0 ? (
+                <div className="py-16 text-center">
+                  <Search className="w-10 h-10 mx-auto mb-3 text-gray-600" />
+                  <p className="text-gray-400 text-base">No tokens found</p>
+                  <p className="text-gray-500 text-sm mt-1">Try a different search term</p>
                 </div>
-              ))
-            ) : displayTokens.length === 0 ? (
-              <div className="py-12 text-center text-gray-500">
-                <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No tokens found</p>
-              </div>
-            ) : (
-              displayTokens.map(t => (
-                <TokenRow
-                  key={`${activeChain}-${t.address}`}
-                  token={t}
-                  chainId={activeChain}
-                  isSelected={isSelected(t)}
-                  onSelect={handleSelect}
-                  chainInfo={chainInfo(activeChain)}
-                  unsupported={unsupported}
-                />
-              ))
-            )}
-            {chainTokens.length > 100 && (
-              <p className="text-center text-xs text-gray-500 py-2">
-                Showing 100 of {chainTokens.length}. Use search.
-              </p>
-            )}
-          </div>
-        </ScrollArea>
-      </DialogContent>
-    </Dialog>
+              ) : (
+                displayTokens.map(t => (
+                  <TokenRow
+                    key={`${activeChain}-${t.address}`}
+                    token={t}
+                    chainId={activeChain}
+                    isSelected={isSelected(t)}
+                    onSelect={handleSelect}
+                    chainInfo={chainInfo(activeChain)}
+                  />
+                ))
+              )}
+              {chainTokens.length > 100 && (
+                <p className="text-center text-sm text-gray-500 py-3">
+                  Showing 100 of {chainTokens.length} tokens. Use search to find more.
+                </p>
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* View All Chains Modal */}
+      <ViewAllChainsModal
+        open={showAllChains}
+        onClose={() => setShowAllChains(false)}
+        chains={sortedChains}
+        activeChain={activeChain}
+        onSelect={setActiveChain}
+        chainInfo={chainInfo}
+      />
+    </>
   );
 });
 TokenSelectModal.displayName = 'TokenSelectModal';
