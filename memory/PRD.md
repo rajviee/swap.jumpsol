@@ -92,8 +92,12 @@ Build a Rhino.fi-style cross-chain swap web app using LI.FI APIs. Users must be 
 |-------|--------|-------|
 | EVM chains (ETH, ARB, OP, etc.) | ✅ Fully supported | Direct LI.FI support |
 | Solana | ✅ Fully supported | Direct LI.FI support |
-| Tron | ⚠️ Bridge required | Shows "coming soon" message |
+| Tron | ⚠️ Routes attempted | LI.FI doesn't support Tron natively - shows "Route unavailable" |
 | Bitcoin | ❌ Not supported | Shows "not supported" message |
+
+## Known Limitations
+- **Tron swaps**: LI.FI API doesn't support Tron chain (ID: 728126428). Direct TRX/USDT swaps to other chains will show "Route unavailable". Workaround: Use wrapped TRX (wTRX) on EVM chains.
+- **Wallet balances**: Currently shows "0" for all tokens (balance fetching not implemented)
 
 ## Prioritized Backlog
 
