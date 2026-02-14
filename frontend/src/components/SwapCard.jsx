@@ -291,13 +291,21 @@ export const SwapCard = memo(({ onTxComplete }) => {
         )}
 
         {/* Errors/Warnings */}
-        {quoteError && bothSupported && (
+        {quoteError && bothSupported && !hasBridgeRequirement && (
           <div className="mt-4 p-2.5 bg-[#E74C3C]/10 border border-[#E74C3C]/20 rounded-lg flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-[#E74C3C]" />
             <span className="text-xs text-[#E74C3C]">{quoteError}</span>
           </div>
         )}
-        {!bothSupported && fromToken && toToken && (
+        {hasBridgeRequirement && fromToken && toToken && (
+          <div className="mt-4 p-2.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-yellow-500" />
+            <span className="text-xs text-yellow-500">
+              {fromRequiresBridge ? getChainName(fromToken.chainId) : getChainName(toToken.chainId)} swaps require bridge routing. Coming soon!
+            </span>
+          </div>
+        )}
+        {!bothSupported && !hasBridgeRequirement && fromToken && toToken && (
           <div className="mt-4 p-2.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-yellow-500" />
             <span className="text-xs text-yellow-500">{!fromSupported ? getChainName(fromToken.chainId) : getChainName(toToken.chainId)} swaps coming soon</span>
