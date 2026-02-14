@@ -199,8 +199,10 @@ export const SwapCard = memo(({ onTxComplete }) => {
     }
   }, [quote, address, fromToken, toToken, amountWei, evmConnected, clearQuote, onTxComplete]);
 
-  // Check if this is a TRON source swap (needs special handling)
+  // Check if this is a TRON source swap (needs Rhino.fi)
   const isTronSourceSwap = fromToken?.chainId === TRON_CHAIN_ID;
+  const isTronDestSwap = toToken?.chainId === TRON_CHAIN_ID;
+  const isRhinoRoute = isTronSourceSwap || isTronDestSwap;
   
   const handleTronSwap = useCallback(() => {
     setShowTronSwap(true);
@@ -213,9 +215,12 @@ export const SwapCard = memo(({ onTxComplete }) => {
     if (!amount || parseFloat(amount) <= 0) return { text: 'Enter amount', disabled: true };
     if (!bothSupported) return { text: 'Chain not supported', disabled: true };
     
-    // TRON source swaps use special flow
-    if (isTronSourceSwap) {
-      return { text: 'Start TRON Swap', disabled: false, action: handleTronSwap, isTron: true };
+    // TRON routes use Rhino.fi - show special flow
+    if (isRhinoRoute) {
+      if (quoteLoading) return { text: 'Getting Rhino.fi quote...', disabled: true, isTron: true };
+      if (quoteError) return { text: 'Route unavailable', disabled: true, isTron: true };
+      if (!quote) return { text: 'Getting quote...', disabled: true, isTron: true };
+      return { text: `Swap via Rhino.fi`, disabled: false, action: handleTronSwap, isTron: true };
     }
     
     if (quoteLoading) return { text: 'Getting quote...', disabled: true };
