@@ -254,16 +254,18 @@ class RhinoService:
         token_in_norm = self.normalize_token(token_in)
         token_out_norm = self.normalize_token(token_out)
         
+        logger.info(f"Checking route support: {chain_in_norm}/{token_in_norm} -> {chain_out_norm}/{token_out_norm}")
+        
         # Check if chains are supported
-        if chain_in_norm not in configs or chain_out_norm not in configs:
+        if chain_in_norm not in configs:
+            logger.info(f"Source chain {chain_in_norm} not in bridge configs: {list(configs.keys())[:10]}...")
+            return False
+        if chain_out_norm not in configs:
+            logger.info(f"Dest chain {chain_out_norm} not in bridge configs")
             return False
         
-        # Check if tokens are supported for swap on these chains
-        if chain_in_norm in swap_configs:
-            chain_swap_tokens = swap_configs[chain_in_norm]
-            if token_in_norm not in chain_swap_tokens:
-                return False
-        
+        # Both chains supported
+        logger.info(f"Both chains supported: {chain_in_norm} and {chain_out_norm}")
         return True
     
     async def get_quote(
