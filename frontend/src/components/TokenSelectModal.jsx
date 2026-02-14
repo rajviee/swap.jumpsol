@@ -205,11 +205,17 @@ export const TokenSelectModal = memo(({
           </div>
         </DialogHeader>
 
-        {/* Unsupported warning */}
+        {/* Unsupported/Bridge warning */}
         {unsupported && (
+          <div className="mx-3 sm:mx-4 mt-2 p-2 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-red-500" />
+            <span className="text-xs text-red-500">{chainInfo(activeChain).name} is not supported</span>
+          </div>
+        )}
+        {!unsupported && needsBridge && (
           <div className="mx-3 sm:mx-4 mt-2 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-yellow-500" />
-            <span className="text-xs text-yellow-500">{chainInfo(activeChain).name} swaps coming soon</span>
+            <span className="text-xs text-yellow-500">{chainInfo(activeChain).name} requires bridge routing - coming soon</span>
           </div>
         )}
 
