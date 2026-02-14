@@ -59,13 +59,21 @@ Build a Rhino.fi-style cross-chain swap web app using LI.FI APIs. Users must be 
 
 ## What's Been Implemented
 
-### Feb 14, 2026 - Latest Updates
+### Feb 14, 2026 - Token Selection UI Redesign
+- **New token selection modal UI** matching the Rhino.fi/jumpsol style:
+  - Title: "Select token (From/To)"
+  - "Filter by chain" label with "View all >" button
+  - Large square chain icons (6 quick access + "+N" for more)
+  - "View all" modal showing all available chains in a grid
+  - Search input: "Search for token..."
+  - "Available tokens" section
+  - Token rows with icon, symbol, name, and balance display
+- **Enabled bridge routing** - Removed blocking for Tron swaps, now attempts to get quotes
+- **Note**: LI.FI API doesn't natively support Tron (chain 728126428) - swaps involving Tron show "Route unavailable"
+
+### Feb 14, 2026 - Branding Updates
 - **Renamed app from "CrossSwap" to "Swap"** throughout the application
 - **Removed "Powered by LI.FI" branding** from footer
-- **Fixed Tron to SOL swap issue**: Now shows appropriate "bridge routing coming soon" message
-- Added `requiresBridge()` function to distinguish chains needing bridge routing from fully unsupported chains
-- Updated UI to show "Bridge" label for Tron chain tokens
-- Chain selector now shows visual distinction (yellow dashed border) for chains requiring bridge routing
 
 ### Previous Updates
 - Backend: FastAPI with LI.FI API integration, MongoDB transaction storage
