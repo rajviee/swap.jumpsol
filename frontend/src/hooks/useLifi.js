@@ -176,8 +176,20 @@ export function useQuote() {
       return null;
     }
     
-    if (!isSwapSupported(fromChain) || !isSwapSupported(toChain)) {
-      setError('Chain not yet supported for swaps');
+    // Check if swap is supported
+    if (!isSwapSupported(fromChain)) {
+      setError(`${CHAIN_INFO[fromChain]?.name || 'This chain'} is not yet supported for swaps`);
+      return null;
+    }
+    
+    if (!isSwapSupported(toChain)) {
+      setError(`${CHAIN_INFO[toChain]?.name || 'This chain'} is not yet supported for swaps`);
+      return null;
+    }
+    
+    // Special handling for Tron - it requires bridge routes
+    if (requiresBridge(fromChain) || requiresBridge(toChain)) {
+      setError('Tron swaps require using wrapped tokens. This feature is coming soon.');
       return null;
     }
     
