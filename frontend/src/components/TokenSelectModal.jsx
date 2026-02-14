@@ -73,46 +73,54 @@ const ChainIcon = memo(({ chain, active, onClick, info }) => {
 });
 ChainIcon.displayName = 'ChainIcon';
 
-// View All Modal
-const ViewAllChainsModal = memo(({ open, onClose, chains, activeChain, onSelect, chainInfo }) => {
+// View All Chains - inline overlay (not a nested Dialog)
+const ViewAllChainsOverlay = memo(({ open, onClose, chains, activeChain, onSelect, chainInfo }) => {
   if (!open) return null;
   
+  const handleSelect = (chainId) => {
+    onSelect(chainId);
+    onClose();
+  };
+  
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] max-w-[500px] max-h-[80vh] bg-[#0a0a0a] border-white/20 rounded-xl p-0">
-        <div className="p-4 border-b border-white/10 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-white">Select Chain</h3>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10">
-            <X className="w-5 h-5 text-gray-400" />
-          </button>
+    <div className="absolute inset-0 z-50 bg-[#0a0a0a] rounded-2xl overflow-hidden flex flex-col">
+      <div className="p-4 border-b border-white/10 flex items-center justify-between flex-shrink-0">
+        <h3 className="text-lg font-bold text-white">Select Chain</h3>
+        <button 
+          onClick={onClose} 
+          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10"
+          data-testid="close-chain-modal"
+        >
+          <X className="w-5 h-5 text-gray-400" />
+        </button>
+      </div>
+      <ScrollArea className="flex-1">
+        <div className="p-4 grid grid-cols-4 sm:grid-cols-5 gap-3">
+          {chains.map(c => (
+            <button
+              key={c.id}
+              onClick={() => handleSelect(c.id)}
+              data-testid={`chain-select-${c.id}`}
+              className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all ${
+                activeChain === c.id 
+                  ? 'bg-[#C1FF72]/20 ring-1 ring-[#C1FF72]' 
+                  : 'bg-[#111] hover:bg-[#1a1a1a]'
+              }`}
+            >
+              {chainInfo(c.id)?.logo ? (
+                <img src={chainInfo(c.id).logo} alt="" className="w-8 h-8 rounded-full" />
+              ) : (
+                <div className="w-8 h-8 rounded-full" style={{ background: chainInfo(c.id)?.color || '#666' }} />
+              )}
+              <span className="text-xs text-white truncate max-w-full">{c.name?.slice(0, 8)}</span>
+            </button>
+          ))}
         </div>
-        <ScrollArea className="max-h-[60vh]">
-          <div className="p-4 grid grid-cols-4 sm:grid-cols-5 gap-3">
-            {chains.map(c => (
-              <button
-                key={c.id}
-                onClick={() => { onSelect(c.id); onClose(); }}
-                className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all ${
-                  activeChain === c.id 
-                    ? 'bg-[#C1FF72]/20 ring-1 ring-[#C1FF72]' 
-                    : 'bg-[#111] hover:bg-[#1a1a1a]'
-                }`}
-              >
-                {chainInfo(c.id)?.logo ? (
-                  <img src={chainInfo(c.id).logo} alt="" className="w-8 h-8 rounded-full" />
-                ) : (
-                  <div className="w-8 h-8 rounded-full" style={{ background: chainInfo(c.id)?.color || '#666' }} />
-                )}
-                <span className="text-xs text-white truncate max-w-full">{c.name?.slice(0, 8)}</span>
-              </button>
-            ))}
-          </div>
-        </ScrollArea>
-      </DialogContent>
-    </Dialog>
+      </ScrollArea>
+    </div>
   );
 });
-ViewAllChainsModal.displayName = 'ViewAllChainsModal';
+ViewAllChainsOverlay.displayName = 'ViewAllChainsOverlay';
 
 export const TokenSelectModal = memo(({
   open,
