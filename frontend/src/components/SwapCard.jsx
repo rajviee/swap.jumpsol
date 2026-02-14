@@ -268,14 +268,20 @@ export const SwapCard = memo(({ onTxComplete }) => {
         <div className="bg-[#111] rounded-lg p-3 sm:p-4 mt-2">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-gray-500">To</span>
-            {toToken && quote && <span className="text-xs text-gray-500">~{formatUSD(quote.estimate.toAmountUSD)}</span>}
+            {toToken && quote && (
+              <span className="text-xs text-gray-500">
+                ~{formatUSD(quote.toAmountUSD || quote.estimate?.toAmountUSD)}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {quoteLoading ? (
               <Skeleton className="flex-1 h-12 bg-[#222] rounded-lg" />
             ) : (
               <div className="flex-1 h-12 flex items-center">
-                <span className="text-xl font-mono text-white">{quote ? formatTokenAmount(quote.estimate.toAmount, toToken?.decimals, 6) : '0.0'}</span>
+                <span className="text-xl font-mono text-white">
+                  {quote ? formatTokenAmount(quote.toAmount || quote.estimate?.toAmount, toToken?.decimals, 6) : '0.0'}
+                </span>
               </div>
             )}
             <TokenBtn token={toToken} onClick={() => setShowTo(true)} testId="to-token" />
@@ -290,33 +296,87 @@ export const SwapCard = memo(({ onTxComplete }) => {
         </div>
 
         {/* Route info */}
-        {quote && !quoteError && bothSupported && (
+        {quote && !quoteError && bothSupported && !isTronSourceSwap && (
           <div className="mt-4 p-3 bg-[#0a0a0a] border border-white/10 rounded-lg animate-fade-in">
             <div className="flex items-center gap-2 mb-2">
               <Route className="w-4 h-4 text-[#C1FF72]" />
               <span className="text-sm font-medium text-white">Route</span>
+              {quote.provider && (
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  quote.provider === 'rhino' ? 'bg-purple-500/20 text-purple-400' : 'bg-[#C1FF72]/20 text-[#C1FF72]'
+                }`}>
+                  via {quote.provider === 'rhino' ? 'Rhino.fi' : 'LI.FI'}
+                </span>
+              )}
             </div>
             <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between"><span className="text-gray-500">Provider</span><span className="text-white">{quote.toolDetails?.name || 'LI.FI'}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Time</span><span className="text-white flex items-center gap-1"><Clock className="w-3 h-3" />{formatTime(quote.estimate.executionDuration)}</span></div>
-              {quote.estimate.gasCosts?.[0] && <div className="flex justify-between"><span className="text-gray-500">Gas</span><span className="text-white">~{formatUSD(quote.estimate.gasCosts[0].amountUSD)}</span></div>}
+              <div className="flex justify-between">
+                <span className="text-gray-500">Provider</span>
+                <span className="text-white">{quote.provider === 'rhino' ? 'Rhino.fi Bridge' : quote.toolDetails?.name || 'LI.FI'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Time</span>
+                <span className="text-white flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {quote.provider === 'rhino' 
+                    ? `~${Math.round((quote.estimatedTime || 60) / 60)} min` 
+                    : formatTime(quote.estimate?.executionDuration)}
+                </span>
+              </div>
+              {(quote.gasCostUSD || quote.estimate?.gasCosts?.[0]) && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Gas</span>
+                  <span className="text-white">~{formatUSD(quote.gasCostUSD || quote.estimate?.gasCosts?.[0]?.amountUSD)}</span>
+                </div>
+              )}
+              {quote.feeCostUSD && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Fee</span>
+                  <span className="text-white">~{formatUSD(quote.feeCostUSD)}</span>
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* TRON swap info */}
+        {/* TRON/Rhino route info */}
         {isTronSourceSwap && fromToken && toToken && amount && parseFloat(amount) > 0 && (
           <div className="mt-4 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg animate-fade-in">
             <div className="flex items-center gap-2 mb-2">
               <Zap className="w-4 h-4 text-purple-400" />
-              <span className="text-sm font-medium text-purple-400">TRON Bridge Route</span>
+              <span className="text-sm font-medium text-purple-400">Rhino.fi Bridge Route</span>
             </div>
-            <p className="text-xs text-gray-400">
-              This swap uses Rhino-style ingress: deposit TRX/USDT → SunSwap → Allbridge → LI.FI → {toToken.symbol}
-            </p>
-            <div className="mt-2 text-xs text-gray-500">
-              <span>Est. time: ~15 min</span>
-            </div>
+            {quote && quote.provider === 'rhino' ? (
+              <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">You pay</span>
+                  <span className="text-white">{amount} {fromToken.symbol} (~${quote.fromAmountUSD?.toFixed(2)})</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">You receive</span>
+                  <span className="text-[#C1FF72]">~{formatTokenAmount(quote.toAmount, toToken?.decimals, 4)} {toToken.symbol}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Fee</span>
+                  <span className="text-white">~${quote.feeCostUSD?.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Est. time</span>
+                  <span className="text-white">&lt;1 min</span>
+                </div>
+              </div>
+            ) : quoteLoading ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+                <span className="text-xs text-gray-400">Getting Rhino.fi quote...</span>
+              </div>
+            ) : quoteError ? (
+              <p className="text-xs text-red-400">{quoteError}</p>
+            ) : (
+              <p className="text-xs text-gray-400">
+                Bridge via Rhino.fi: {fromToken.symbol} (Tron) → {toToken.symbol} ({getChainName(toToken.chainId)})
+              </p>
+            )}
           </div>
         )}
 
