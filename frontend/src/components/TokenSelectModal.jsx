@@ -317,18 +317,18 @@ export const TokenSelectModal = memo(({
               )}
             </div>
           </ScrollArea>
+          
+          {/* View All Chains Overlay - positioned inside the dialog */}
+          <ViewAllChainsOverlay
+            open={showAllChains}
+            onClose={() => setShowAllChains(false)}
+            chains={sortedChains}
+            activeChain={activeChain}
+            onSelect={setActiveChain}
+            chainInfo={chainInfo}
+          />
         </DialogContent>
       </Dialog>
-
-      {/* View All Chains Modal */}
-      <ViewAllChainsModal
-        open={showAllChains}
-        onClose={() => setShowAllChains(false)}
-        chains={sortedChains}
-        activeChain={activeChain}
-        onSelect={setActiveChain}
-        chainInfo={chainInfo}
-      />
     </>
   );
 });
