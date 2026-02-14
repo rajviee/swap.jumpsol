@@ -357,9 +357,9 @@ export const TokenSelectModal = memo(({
                   />
                 ))
               )}
-              {chainTokens.length > 100 && (
+              {chainTokens.length > 500 && (
                 <p className="text-center text-sm text-gray-500 py-3">
-                  Showing 100 of {chainTokens.length} tokens. Use search to find more.
+                  Showing 500 of {chainTokens.length} tokens. Use search to find more.
                 </p>
               )}
             </div>
