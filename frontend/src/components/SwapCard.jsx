@@ -64,7 +64,7 @@ export const SwapCard = memo(({ onTxComplete }) => {
   const { chains, loading: chainsLoading } = useChains();
   const chainIds = useMemo(() => chains.map(c => c.id), [chains]);
   const { tokens, loading: tokensLoading } = useTokens(chainIds);
-  const { quote, loading: quoteLoading, error: quoteError, fetchQuote, clearQuote } = useQuote();
+  const { quote, loading: quoteLoading, error: quoteError, provider: quoteProvider, fetchQuote, clearQuote } = useQuote();
   
   const debouncedAmount = useDebounce(amount, 500);
 
