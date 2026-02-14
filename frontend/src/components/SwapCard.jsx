@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { useWalletStore, SOLANA_CHAIN_ID, TRON_CHAIN_ID } from '../store/walletStore';
-import { useChains, useTokens, useQuote, formatTokenAmount, formatUSD, formatTime, parseTokenAmount, CHAIN_INFO, isSwapSupported, requiresBridge, getChainName } from '../hooks/useLifi';
+import { useChains, useTokens, useQuote, formatTokenAmount, formatUSD, formatTime, parseTokenAmount, CHAIN_INFO, isSwapSupported, getChainName } from '../hooks/useLifi';
 import { transactionApi } from '../services/api';
 import { TokenSelectModal } from './TokenSelectModal';
 import { Button } from './ui/button';
