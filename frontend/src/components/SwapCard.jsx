@@ -3,11 +3,12 @@ import { useWalletStore, SOLANA_CHAIN_ID, TRON_CHAIN_ID } from '../store/walletS
 import { useChains, useTokens, useQuote, formatTokenAmount, formatUSD, formatTime, parseTokenAmount, CHAIN_INFO, isSwapSupported, getChainName } from '../hooks/useLifi';
 import { transactionApi } from '../services/api';
 import { TokenSelectModal } from './TokenSelectModal';
+import { TronSwapModal } from './TronSwapModal';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Skeleton } from './ui/skeleton';
 import { toast } from 'sonner';
-import { ArrowDownUp, ChevronDown, Loader2, AlertCircle, Clock, Route, AlertTriangle } from 'lucide-react';
+import { ArrowDownUp, ChevronDown, Loader2, AlertCircle, Clock, Route, AlertTriangle, Zap } from 'lucide-react';
 import { ethers } from 'ethers';
 
 // Debounce hook
