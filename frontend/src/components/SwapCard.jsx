@@ -236,7 +236,6 @@ export const SwapCard = memo(({ onTxComplete }) => {
               {CHAIN_INFO[fromToken.chainId]?.logo && <img src={CHAIN_INFO[fromToken.chainId].logo} alt="" className="w-3.5 h-3.5 rounded-full" />}
               <span>on {getChainName(fromToken.chainId)}</span>
               {!fromSupported && <span className="text-yellow-500 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Not supported</span>}
-              {fromSupported && fromRequiresBridge && <span className="text-yellow-500 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Bridge</span>}
             </div>
           )}
         </div>
