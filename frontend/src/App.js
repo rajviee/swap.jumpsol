@@ -23,7 +23,7 @@ function App() {
           {/* Hero */}
           <section className="text-center mb-8 sm:mb-12">
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-3 sm:mb-4">
-              Cross-Chain <span className="text-[#C1FF72]">Swap</span>
+              <span className="text-[#C1FF72]">Swap</span>
             </h1>
             <p className="text-gray-400 text-sm sm:text-base md:text-lg max-w-xl mx-auto px-4">
               Swap tokens across multiple chains with LI.FI
@@ -43,15 +43,11 @@ function App() {
           {/* Footer */}
           <footer className="mt-12 sm:mt-16 text-center">
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-gray-500">
-              <a href="https://li.fi" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
-                Powered by LI.FI
-              </a>
-              <span className="hidden sm:inline">•</span>
               <a href="https://docs.li.fi" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
                 Docs
               </a>
             </div>
-            <p className="text-gray-600 text-[10px] sm:text-xs mt-4">© 2024 CrossSwap</p>
+            <p className="text-gray-600 text-[10px] sm:text-xs mt-4">© 2024 Swap</p>
           </footer>
         </div>
       </main>

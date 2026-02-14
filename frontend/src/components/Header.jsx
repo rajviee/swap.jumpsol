@@ -108,7 +108,7 @@ export const Header = memo(() => {
               <span className="text-black font-black text-sm sm:text-lg">X</span>
             </div>
             <span className="font-bold text-lg sm:text-xl text-white hidden sm:block">
-              CrossSwap
+              Swap
             </span>
           </div>
 

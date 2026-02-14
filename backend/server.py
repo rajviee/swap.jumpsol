@@ -20,7 +20,7 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # Create the main app
-app = FastAPI(title="LI.FI Cross-Chain Swap API")
+app = FastAPI(title="Swap API")
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -285,7 +285,7 @@ async def get_transaction(tx_id: str):
 
 @api_router.get("/health")
 async def health_check():
-    return {"status": "healthy", "service": "LI.FI Cross-Chain Swap API"}
+    return {"status": "healthy", "service": "Swap API"}
 
 
 # Include the router in the main app
