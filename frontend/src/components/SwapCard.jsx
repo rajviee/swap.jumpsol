@@ -81,7 +81,10 @@ export const SwapCard = memo(({ onTxComplete }) => {
 
   const fromSupported = fromToken ? isSwapSupported(fromToken.chainId) : true;
   const toSupported = toToken ? isSwapSupported(toToken.chainId) : true;
+  const fromRequiresBridge = fromToken ? requiresBridge(fromToken.chainId) : false;
+  const toRequiresBridge = toToken ? requiresBridge(toToken.chainId) : false;
   const bothSupported = fromSupported && toSupported;
+  const hasBridgeRequirement = fromRequiresBridge || toRequiresBridge;
 
   // Fetch quote
   useEffect(() => {
