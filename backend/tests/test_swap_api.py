@@ -95,7 +95,8 @@ class TestTransactionCRUD:
     
     @pytest.fixture
     def test_wallet_address(self):
-        return f"TEST_0x{uuid.uuid4().hex[:40]}"
+        # Use lowercase to match backend query behavior
+        return f"test_0x{uuid.uuid4().hex[:40]}"
     
     def test_create_transaction(self, test_wallet_address):
         """Create a new transaction"""
