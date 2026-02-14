@@ -43,7 +43,7 @@ const TokenRow = memo(({ token, chainId, isSelected, onSelect, chainInfo, unsupp
 TokenRow.displayName = 'TokenRow';
 
 // Chain Button - memoized
-const ChainBtn = memo(({ chain, active, onClick, info, unsupported }) => {
+const ChainBtn = memo(({ chain, active, onClick, info, unsupported, needsBridge }) => {
   const [imgErr, setImgErr] = useState(false);
   
   return (
@@ -51,7 +51,7 @@ const ChainBtn = memo(({ chain, active, onClick, info, unsupported }) => {
       onClick={onClick}
       className={`chain-btn flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
         active ? 'bg-[#C1FF72] text-black' : 'bg-[#111] text-gray-400 hover:bg-[#1a1a1a] hover:text-white'
-      } ${unsupported && !active ? 'border border-dashed border-gray-600' : ''}`}
+      } ${unsupported && !active ? 'border border-dashed border-red-600/50' : ''} ${needsBridge && !unsupported && !active ? 'border border-dashed border-yellow-600/50' : ''}`}
       data-testid={`chain-${chain.id}`}
     >
       {info?.logo && !imgErr ? (
