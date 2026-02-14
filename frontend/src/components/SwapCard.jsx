@@ -94,16 +94,18 @@ export const SwapCard = memo(({ onTxComplete }) => {
     fetchQuote({
       fromChain: fromToken.chainId,
       toChain: toToken.chainId,
-      fromToken: fromToken.address,
-      toToken: toToken.address,
+      fromToken: fromToken.address || fromToken.symbol,
+      toToken: toToken.address || toToken.symbol,
       fromAmount: amountWei,
       fromAddress: address,
+      toAddress: address,
     });
   }, [fromToken, toToken, debouncedAmount, address, amountWei, bothSupported, fetchQuote, clearQuote]);
 
   const swapDirection = useCallback(() => {
     const temp = fromToken;
-    const tempAmount = quote ? formatTokenAmount(quote.estimate.toAmount, toToken?.decimals, 6) : '';
+    const tempAmount = quote?.toAmount ? formatTokenAmount(quote.toAmount, toToken?.decimals, 6) : 
+                       quote?.estimate?.toAmount ? formatTokenAmount(quote.estimate.toAmount, toToken?.decimals, 6) : '';
     setFromToken(toToken);
     setToToken(temp);
     setAmount(tempAmount);
