@@ -4,7 +4,7 @@ import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { Skeleton } from './ui/skeleton';
 import { Search, X, Check, AlertTriangle } from 'lucide-react';
-import { CHAIN_INFO, PRIORITY_CHAINS, FALLBACK_TOKENS, isSwapSupported, formatTokenAmount, SOLANA_CHAIN_ID, TRON_CHAIN_ID, BITCOIN_CHAIN_ID } from '../hooks/useLifi';
+import { CHAIN_INFO, PRIORITY_CHAINS, FALLBACK_TOKENS, isSwapSupported, requiresBridge, formatTokenAmount, SOLANA_CHAIN_ID, TRON_CHAIN_ID, BITCOIN_CHAIN_ID } from '../hooks/useLifi';
 
 // Token Row - memoized for performance
 const TokenRow = memo(({ token, chainId, isSelected, onSelect, chainInfo, unsupported }) => {
