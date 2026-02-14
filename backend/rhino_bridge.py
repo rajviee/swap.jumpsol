@@ -31,7 +31,22 @@ class RhinoConfig:
     STATUS_URL = f"{BASE_URL}/history/bridge"
     
     # Chain name mappings (Rhino.fi uses uppercase chain names)
+    # Map both chain names and chain IDs
     CHAIN_NAMES = {
+        # Chain IDs
+        "728126428": "TRON",
+        "1151111081099710": "SOLANA",
+        "1": "ETHEREUM",
+        "42161": "ARBITRUM",
+        "10": "OPTIMISM",
+        "8453": "BASE",
+        "137": "MATIC_POS",
+        "56": "BINANCE",
+        "43114": "AVALANCHE",
+        "324": "ZKSYNC",
+        "59144": "LINEA",
+        "534352": "SCROLL",
+        # Chain name aliases
         "TRON": "TRON",
         "TRX": "TRON",
         "SOLANA": "SOLANA",
@@ -43,12 +58,17 @@ class RhinoConfig:
         "OPTIMISM": "OPTIMISM",
         "OP": "OPTIMISM",
         "BASE": "BASE",
-        "POLYGON": "POLYGON",
-        "MATIC": "POLYGON",
-        "BSC": "BSC",
-        "BNB": "BSC",
+        "POLYGON": "MATIC_POS",
+        "MATIC": "MATIC_POS",
+        "MATIC_POS": "MATIC_POS",
+        "BSC": "BINANCE",
+        "BINANCE": "BINANCE",
+        "BNB": "BINANCE",
         "AVALANCHE": "AVALANCHE",
         "AVAX": "AVALANCHE",
+        "ZKSYNC": "ZKSYNC",
+        "LINEA": "LINEA",
+        "SCROLL": "SCROLL",
     }
     
     # Token symbol mappings
