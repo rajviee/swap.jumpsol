@@ -50,8 +50,17 @@ export const CUSTOM_CHAINS = [
 ];
 
 // Check if chain is supported for swaps
+// TRON and BITCOIN require special handling but can swap via wrapped tokens on other chains
 export const isSwapSupported = (chainId) => {
-  return chainId !== TRON_CHAIN_ID && chainId !== BITCOIN_CHAIN_ID;
+  // Bitcoin is fully unsupported for now
+  if (chainId === BITCOIN_CHAIN_ID) return false;
+  // All other chains including Tron and Solana are supported
+  return true;
+};
+
+// Check if chain requires bridge (non-native LI.FI support)
+export const requiresBridge = (chainId) => {
+  return chainId === TRON_CHAIN_ID;
 };
 
 // Hooks
