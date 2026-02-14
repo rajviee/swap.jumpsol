@@ -346,8 +346,10 @@ class RhinoService:
                 json=payload,
                 headers=self._get_headers(use_authenticated)
             ) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
+                response_text = await resp.text()
+                
+                if resp.status == 200 and response_text:
+                    data = await resp.json() if response_text else {}
                     
                     # Parse response
                     fees = data.get("fees", {})
@@ -373,15 +375,26 @@ class RhinoService:
                         "raw": data
                     }
                 elif resp.status == 404:
-                    logger.warning(f"Rhino.fi route not found: {chain_in_norm}/{token_in_norm} -> {chain_out_norm}/{token_out_norm}")
-                    return None
+                    logger.warning(f"Rhino.fi route not available (404): {chain_in_norm}/{token_in_norm} -> {chain_out_norm}/{token_out_norm}")
+                    return {
+                        "provider": "rhino",
+                        "error": "This route is not currently available on Rhino.fi. Try USDT/USDC pairs between supported chains.",
+                        "supported": False
+                    }
                 else:
-                    error = await resp.text()
-                    logger.error(f"Rhino.fi quote failed: {resp.status} - {error}")
-                    return None
+                    logger.error(f"Rhino.fi quote failed: {resp.status} - {response_text[:200]}")
+                    return {
+                        "provider": "rhino",
+                        "error": f"Rhino.fi API error: {resp.status}",
+                        "supported": False
+                    }
         except Exception as e:
             logger.error(f"Rhino.fi quote error: {e}")
-            return None
+            return {
+                "provider": "rhino",
+                "error": f"Connection error: {str(e)}",
+                "supported": False
+            }
     
     async def commit_quote(self, quote_id: str) -> Optional[Dict]:
         """Commit a quote to prepare for execution"""
