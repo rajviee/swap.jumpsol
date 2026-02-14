@@ -208,7 +208,7 @@ export const TokenSelectModal = memo(({
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="w-[95vw] max-w-[460px] h-auto max-h-[85vh] bg-[#0a0a0a] border-white/20 rounded-2xl p-0 flex flex-col overflow-hidden">
+        <DialogContent className="w-[95vw] max-w-[460px] h-auto max-h-[85vh] bg-[#0a0a0a] border-white/20 rounded-2xl p-0 flex flex-col overflow-hidden relative">
           {/* Header */}
           <div className="p-4 sm:p-5 flex items-center justify-between flex-shrink-0">
             <h2 className="text-lg sm:text-xl font-bold text-white">
