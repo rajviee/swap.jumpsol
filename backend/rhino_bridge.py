@@ -572,11 +572,19 @@ class BridgeRouter:
             amount, depositor, recipient
         )
         
-        if not quote:
+        if not quote or quote.get("error"):
             return {
                 "provider": "rhino",
                 "supported": False,
-                "error": "Failed to get quote from Rhino.fi",
+                "error": quote.get("error") if quote else "Failed to get quote from Rhino.fi",
+                "fallback_available": False
+            }
+        
+        if not quote.get("quote_id"):
+            return {
+                "provider": "rhino",
+                "supported": False,
+                "error": quote.get("error", "Route not available - try USDT pairs"),
                 "fallback_available": False
             }
         
