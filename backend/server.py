@@ -201,7 +201,10 @@ async def get_tx_status(
 @api_router.post("/transactions", response_model=Transaction)
 async def create_transaction(tx: TransactionCreate):
     """Create a new transaction record"""
-    tx_obj = Transaction(**tx.model_dump())
+    # Lowercase wallet address for consistency with queries
+    tx_data = tx.model_dump()
+    tx_data['wallet_address'] = tx_data['wallet_address'].lower()
+    tx_obj = Transaction(**tx_data)
     doc = tx_obj.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
     doc['updated_at'] = doc['updated_at'].isoformat()
