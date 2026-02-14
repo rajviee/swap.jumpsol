@@ -199,6 +199,7 @@ export const TokenSelectModal = memo(({
                   onClick={() => setActiveChain(c.id)}
                   info={chainInfo(c.id)}
                   unsupported={!isSwapSupported(c.id)}
+                  needsBridge={requiresBridge(c.id)}
                 />
               ))}
             </div>
