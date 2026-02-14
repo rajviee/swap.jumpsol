@@ -360,8 +360,11 @@ export const TokenSelectModal = memo(({
             <span className="text-xs text-gray-500">{chainTokens.length} tokens</span>
           </div>
 
-          {/* Token List */}
-          <ScrollArea className="flex-1 min-h-0">
+          {/* Token List - using native scroll */}
+          <div 
+            className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/30"
+            style={{ minHeight: 0 }}
+          >
             <div className="px-2 sm:px-3 pb-4">
               {loading ? (
                 Array(5).fill(0).map((_, i) => (
@@ -398,7 +401,7 @@ export const TokenSelectModal = memo(({
                 </p>
               )}
             </div>
-          </ScrollArea>
+          </div>
           
           {/* View All Chains Overlay - positioned inside the dialog */}
           <ViewAllChainsOverlay
