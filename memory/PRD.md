@@ -59,6 +59,24 @@ Build a Rhino.fi-style cross-chain swap web app using LI.FI APIs. Users must be 
 
 ## What's Been Implemented
 
+### Feb 14, 2026 - TRON Bridge Support (Rhino-style Ingress)
+- **Complete TRON → Any Chain swap support** via Rhino-style multi-step ingress:
+  1. **TronWeb Integration**: Generate unique deposit addresses per swap
+  2. **SunSwap Integration**: TRX → USDT swaps on TRON DEX
+  3. **Allbridge Integration**: TRC20 USDT → ERC20 USDT bridging
+  4. **LI.FI Routing**: Route from EVM to destination chain
+  5. **State Machine**: `deposit_pending → received → swapped → bridged → routed → settled`
+- **Backend Services**:
+  - `/api/tron/swap/create` - Create swap order with deposit address
+  - `/api/tron/swap/estimate` - Get full route estimate with fees
+  - `/api/tron/swap/{id}` - Check swap status
+  - `/api/tron/swap/{id}/check-deposit` - Monitor deposits
+- **Frontend**:
+  - TronSwapModal component with step-by-step progress
+  - Purple gradient button for TRON swaps
+  - Route info showing SunSwap → Allbridge → LI.FI flow
+  - Real-time status polling with progress bar
+
 ### Feb 14, 2026 - Token Selection UI Redesign
 - **New token selection modal UI** matching the Rhino.fi/jumpsol style:
   - Title: "Select token (From/To)"
@@ -68,8 +86,6 @@ Build a Rhino.fi-style cross-chain swap web app using LI.FI APIs. Users must be 
   - Search input: "Search for token..."
   - "Available tokens" section
   - Token rows with icon, symbol, name, and balance display
-- **Enabled bridge routing** - Removed blocking for Tron swaps, now attempts to get quotes
-- **Note**: LI.FI API doesn't natively support Tron (chain 728126428) - swaps involving Tron show "Route unavailable"
 
 ### Feb 14, 2026 - Branding Updates
 - **Renamed app from "CrossSwap" to "Swap"** throughout the application
