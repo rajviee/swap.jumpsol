@@ -159,39 +159,86 @@ export const TokenSelectModal = memo(({
   const displayChains = useMemo(() => sortedChains.slice(0, 6), [sortedChains]);
   const remainingCount = Math.max(0, sortedChains.length - 6);
 
-  // Tokens for active chain
+  // Tokens for active chain - dedupe wrapped versions
   const chainTokens = useMemo(() => {
     let list = tokens[activeChain] || [];
     if (list.length === 0 && FALLBACK_TOKENS[activeChain]) {
       list = FALLBACK_TOKENS[activeChain];
     }
     
+    // Dedupe: prefer native tokens over wrapped versions
+    // e.g., "SOL" over "Wrapped SOL" on non-Solana chains
+    const seen = new Map();
+    const deduped = [];
+    
+    for (const token of list) {
+      const symbol = token.symbol?.toUpperCase() || '';
+      // Skip tokens with "Wrapped" in name if we already have the base symbol
+      const isWrapped = token.name?.toLowerCase().includes('wrapped') || 
+                        token.name?.toLowerCase().includes('wormhole') ||
+                        token.symbol?.toLowerCase().startsWith('w') && token.symbol?.length > 2;
+      
+      const baseSymbol = isWrapped && symbol.startsWith('W') ? symbol.slice(1) : symbol;
+      
+      if (seen.has(baseSymbol)) {
+        // If current is native/non-wrapped and existing is wrapped, replace
+        const existing = seen.get(baseSymbol);
+        const existingIsWrapped = existing.name?.toLowerCase().includes('wrapped');
+        if (existingIsWrapped && !isWrapped) {
+          const idx = deduped.findIndex(t => t.address === existing.address);
+          if (idx !== -1) deduped[idx] = token;
+          seen.set(baseSymbol, token);
+        }
+      } else {
+        seen.set(baseSymbol, token);
+        deduped.push(token);
+      }
+    }
+    
+    // Apply search filter
     if (search) {
       const s = search.toLowerCase();
-      list = list.filter(t => 
+      return deduped.filter(t => 
         t.symbol?.toLowerCase().includes(s) ||
         t.name?.toLowerCase().includes(s) ||
         t.address?.toLowerCase() === s
       );
     }
     
-    return list;
+    return deduped;
   }, [tokens, activeChain, search]);
 
-  // Sort: native first, then popular, then alphabetical
+  // Sort: native first, then popular stables, then by liquidity/popularity, then alphabetical
   const displayTokens = useMemo(() => {
+    const prioritySymbols = ['ETH', 'SOL', 'TRX', 'BTC', 'BNB', 'MATIC', 'AVAX', 'FTM', 'USDC', 'USDT', 'DAI', 'WETH', 'WBTC'];
+    
     const sorted = [...chainTokens].sort((a, b) => {
-      if (a.isNative) return -1;
-      if (b.isNative) return 1;
-      const nativeSymbols = ['ETH', 'SOL', 'TRX', 'BTC', 'BNB', 'MATIC', 'AVAX', 'USDC', 'USDT', 'DAI'];
-      const aIdx = nativeSymbols.indexOf(a.symbol);
-      const bIdx = nativeSymbols.indexOf(b.symbol);
+      // Native tokens first
+      if (a.isNative && !b.isNative) return -1;
+      if (b.isNative && !a.isNative) return 1;
+      
+      // Priority symbols
+      const aIdx = prioritySymbols.indexOf(a.symbol?.toUpperCase());
+      const bIdx = prioritySymbols.indexOf(b.symbol?.toUpperCase());
       if (aIdx !== -1 && bIdx === -1) return -1;
       if (bIdx !== -1 && aIdx === -1) return 1;
       if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+      
+      // Then by priceUSD (if available) as proxy for popularity
+      const aPrice = parseFloat(a.priceUSD) || 0;
+      const bPrice = parseFloat(b.priceUSD) || 0;
+      if (aPrice > 0 && bPrice > 0) {
+        // Higher price tokens tend to be more popular
+        if (aPrice > 0.01 && bPrice < 0.01) return -1;
+        if (bPrice > 0.01 && aPrice < 0.01) return 1;
+      }
+      
+      // Finally alphabetical
       return (a.symbol || '').localeCompare(b.symbol || '');
     });
-    return sorted.slice(0, 100);
+    
+    // Show more tokens - up to 500
+    return sorted.slice(0, 500);
   }, [chainTokens]);
 
   const handleSelect = useCallback((token) => {
