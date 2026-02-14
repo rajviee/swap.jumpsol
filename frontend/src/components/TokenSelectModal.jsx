@@ -167,38 +167,53 @@ export const TokenSelectModal = memo(({
     }
     
     // Dedupe: prefer native tokens over wrapped versions
-    // e.g., "SOL" over "Wrapped SOL" on non-Solana chains
-    const seen = new Map();
-    const deduped = [];
+    // Keep track of unique symbols, prefer tokens without "wrapped" or "wormhole" in name
+    const symbolMap = new Map();
     
     for (const token of list) {
       const symbol = token.symbol?.toUpperCase() || '';
-      // Skip tokens with "Wrapped" in name if we already have the base symbol
-      const isWrapped = token.name?.toLowerCase().includes('wrapped') || 
-                        token.name?.toLowerCase().includes('wormhole') ||
-                        token.symbol?.toLowerCase().startsWith('w') && token.symbol?.length > 2;
+      if (!symbol) continue;
       
-      const baseSymbol = isWrapped && symbol.startsWith('W') ? symbol.slice(1) : symbol;
+      // Check if this is a wrapped/bridged version
+      const nameLower = (token.name || '').toLowerCase();
+      const isWrappedOrBridged = 
+        nameLower.includes('wrapped') || 
+        nameLower.includes('wormhole') ||
+        nameLower.includes('bridged') ||
+        nameLower.includes('portal') ||
+        nameLower.includes('anyswap') ||
+        nameLower.includes('multichain');
       
-      if (seen.has(baseSymbol)) {
-        // If current is native/non-wrapped and existing is wrapped, replace
-        const existing = seen.get(baseSymbol);
-        const existingIsWrapped = existing.name?.toLowerCase().includes('wrapped');
-        if (existingIsWrapped && !isWrapped) {
-          const idx = deduped.findIndex(t => t.address === existing.address);
-          if (idx !== -1) deduped[idx] = token;
-          seen.set(baseSymbol, token);
+      if (symbolMap.has(symbol)) {
+        const existing = symbolMap.get(symbol);
+        const existingNameLower = (existing.name || '').toLowerCase();
+        const existingIsWrapped = 
+          existingNameLower.includes('wrapped') || 
+          existingNameLower.includes('wormhole') ||
+          existingNameLower.includes('bridged');
+        
+        // Replace if: existing is wrapped but current is not, OR current has higher price/liquidity
+        if (existingIsWrapped && !isWrappedOrBridged) {
+          symbolMap.set(symbol, token);
+        } else if (!existingIsWrapped && !isWrappedOrBridged) {
+          // Both are non-wrapped, prefer the one with priceUSD or logoURI
+          const existingScore = (existing.priceUSD ? 1 : 0) + (existing.logoURI ? 1 : 0);
+          const currentScore = (token.priceUSD ? 1 : 0) + (token.logoURI ? 1 : 0);
+          if (currentScore > existingScore) {
+            symbolMap.set(symbol, token);
+          }
         }
       } else {
-        seen.set(baseSymbol, token);
-        deduped.push(token);
+        symbolMap.set(symbol, token);
       }
     }
+    
+    let deduped = Array.from(symbolMap.values());
     
     // Apply search filter
     if (search) {
       const s = search.toLowerCase();
-      return deduped.filter(t => 
+      deduped = deduped.filter(t => 
         t.symbol?.toLowerCase().includes(s) ||
         t.name?.toLowerCase().includes(s) ||
         t.address?.toLowerCase() === s
