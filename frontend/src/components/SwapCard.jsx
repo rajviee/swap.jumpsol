@@ -302,8 +302,24 @@ export const SwapCard = memo(({ onTxComplete }) => {
           </div>
         )}
 
+        {/* TRON swap info */}
+        {isTronSourceSwap && fromToken && toToken && amount && parseFloat(amount) > 0 && (
+          <div className="mt-4 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg animate-fade-in">
+            <div className="flex items-center gap-2 mb-2">
+              <Zap className="w-4 h-4 text-purple-400" />
+              <span className="text-sm font-medium text-purple-400">TRON Bridge Route</span>
+            </div>
+            <p className="text-xs text-gray-400">
+              This swap uses Rhino-style ingress: deposit TRX/USDT → SunSwap → Allbridge → LI.FI → {toToken.symbol}
+            </p>
+            <div className="mt-2 text-xs text-gray-500">
+              <span>Est. time: ~15 min</span>
+            </div>
+          </div>
+        )}
+
         {/* Errors/Warnings */}
-        {quoteError && bothSupported && (
+        {quoteError && bothSupported && !isTronSourceSwap && (
           <div className="mt-4 p-2.5 bg-[#E74C3C]/10 border border-[#E74C3C]/20 rounded-lg flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-[#E74C3C]" />
             <span className="text-xs text-[#E74C3C]">{quoteError}</span>
@@ -320,10 +336,15 @@ export const SwapCard = memo(({ onTxComplete }) => {
         <Button
           onClick={btnState.action}
           disabled={btnState.disabled}
-          className="w-full h-12 mt-4 rounded-lg bg-[#C1FF72] text-black font-bold text-base hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+          className={`w-full h-12 mt-4 rounded-lg font-bold text-base hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed ${
+            btnState.isTron 
+              ? 'bg-gradient-to-r from-purple-500 to-[#C1FF72] text-white' 
+              : 'bg-[#C1FF72] text-black'
+          }`}
           data-testid="swap-btn"
         >
           {(quoteLoading || swapping) && <Loader2 className="w-5 h-5 mr-2 animate-spin" />}
+          {btnState.isTron && <Zap className="w-5 h-5 mr-2" />}
           {btnState.text}
         </Button>
       </div>
@@ -354,6 +375,18 @@ export const SwapCard = memo(({ onTxComplete }) => {
         loading={tokensLoading || chainsLoading}
         defaultChainId={lastUsedChainId}
         isFrom={false}
+      />
+      
+      {/* TRON Swap Modal */}
+      <TronSwapModal
+        open={showTronSwap}
+        onClose={() => setShowTronSwap(false)}
+        fromToken={fromToken?.symbol || 'TRX'}
+        fromAmount={parseFloat(amount) || 0}
+        toChain={toToken?.chainId === SOLANA_CHAIN_ID ? 'SOL' : 'ETH'}
+        toToken={toToken?.symbol || 'USDC'}
+        toAddress={address || ''}
+        userAddress={address || ''}
       />
     </>
   );
