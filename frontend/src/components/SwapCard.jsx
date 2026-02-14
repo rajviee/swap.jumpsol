@@ -228,7 +228,7 @@ export const SwapCard = memo(({ onTxComplete }) => {
     if (!quote) return { text: 'Getting quote...', disabled: true };
     if (swapping) return { text: 'Swapping...', disabled: true };
     return { text: 'Swap', disabled: false, action: handleSwap };
-  }, [connected, fromToken, toToken, amount, bothSupported, isTronSourceSwap, quoteLoading, quoteError, quote, swapping, handleSwap, handleTronSwap, setShowWalletModal]);
+  }, [connected, fromToken, toToken, amount, bothSupported, isRhinoRoute, quoteLoading, quoteError, quote, swapping, handleSwap, handleTronSwap, setShowWalletModal]);
 
   return (
     <>
