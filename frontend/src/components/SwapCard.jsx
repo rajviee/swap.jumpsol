@@ -339,6 +339,7 @@ export const SwapCard = memo(({ onTxComplete }) => {
         title="Select From Token"
         loading={tokensLoading || chainsLoading}
         defaultChainId={lastUsedChainId}
+        isFrom={true}
       />
       <TokenSelectModal
         open={showTo}
@@ -351,6 +352,7 @@ export const SwapCard = memo(({ onTxComplete }) => {
         title="Select To Token"
         loading={tokensLoading || chainsLoading}
         defaultChainId={lastUsedChainId}
+        isFrom={false}
       />
     </>
   );
