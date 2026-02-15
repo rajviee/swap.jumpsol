@@ -275,7 +275,7 @@ export const useWalletStore = create(
     }),
     {
       name: 'wallet-store',
-      partialize: (state) => ({ lastUsedChainId: state.lastUsedChainId }),
+      partialize: (state) => ({ lastUsedChainId: state.lastUsedChainId, environment: state.environment }),
     }
   )
 );
