@@ -199,12 +199,12 @@ export const SwapCard = memo(({ onTxComplete }) => {
     }
   }, [quote, address, fromToken, toToken, amountWei, evmConnected, clearQuote, onTxComplete]);
 
-  // Check if this is a TRON source swap (needs Rhino.fi)
-  const isTronSourceSwap = fromToken?.chainId === TRON_CHAIN_ID;
-  const isTronDestSwap = toToken?.chainId === TRON_CHAIN_ID;
-  const isRhinoRoute = isTronSourceSwap || isTronDestSwap;
+  // Check if this route needs Rhino.fi (Tron or Solana)
+  const isTronRoute = fromToken?.chainId === TRON_CHAIN_ID || toToken?.chainId === TRON_CHAIN_ID;
+  const isSolanaRoute = fromToken?.chainId === SOLANA_CHAIN_ID || toToken?.chainId === SOLANA_CHAIN_ID;
+  const isRhinoRoute = isTronRoute || isSolanaRoute;
   
-  const handleTronSwap = useCallback(() => {
+  const handleRhinoSwap = useCallback(() => {
     setShowTronSwap(true);
   }, []);
 
@@ -215,12 +215,12 @@ export const SwapCard = memo(({ onTxComplete }) => {
     if (!amount || parseFloat(amount) <= 0) return { text: 'Enter amount', disabled: true };
     if (!bothSupported) return { text: 'Chain not supported', disabled: true };
     
-    // TRON routes use Rhino.fi - show special flow
+    // Tron/Solana routes use Rhino.fi
     if (isRhinoRoute) {
-      if (quoteLoading) return { text: 'Getting Rhino.fi quote...', disabled: true, isTron: true };
-      if (quoteError) return { text: 'Route unavailable', disabled: true, isTron: true };
-      if (!quote) return { text: 'Getting quote...', disabled: true, isTron: true };
-      return { text: `Swap via Rhino.fi`, disabled: false, action: handleTronSwap, isTron: true };
+      if (quoteLoading) return { text: 'Getting Rhino.fi quote...', disabled: true, isRhino: true };
+      if (quoteError) return { text: 'Route unavailable', disabled: true, isRhino: true };
+      if (!quote) return { text: 'Getting quote...', disabled: true, isRhino: true };
+      return { text: `Swap via Rhino.fi`, disabled: false, action: handleRhinoSwap, isRhino: true };
     }
     
     if (quoteLoading) return { text: 'Getting quote...', disabled: true };
