@@ -51,7 +51,7 @@ const TokenBtn = memo(({ token, onClick, testId }) => {
 TokenBtn.displayName = 'TokenBtn';
 
 export const SwapCard = memo(({ onTxComplete }) => {
-  const { evmConnected, evmAddress, solanaConnected, solanaAddress, tronConnected, tronAddress, setShowWalletModal, activeWalletType, lastUsedChainId } = useWalletStore();
+  const { evmConnected, evmAddress, solanaConnected, solanaAddress, tronConnected, tronAddress, setShowWalletModal, activeWalletType, lastUsedChainId, environment } = useWalletStore();
   
   const [fromToken, setFromToken] = useState(null);
   const [toToken, setToToken] = useState(null);
