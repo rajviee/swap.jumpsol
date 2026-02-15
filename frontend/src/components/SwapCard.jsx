@@ -61,7 +61,7 @@ export const SwapCard = memo(({ onTxComplete }) => {
   const [swapping, setSwapping] = useState(false);
   const [showTronSwap, setShowTronSwap] = useState(false);
 
-  const { chains, loading: chainsLoading } = useChains();
+  const { chains, loading: chainsLoading } = useChains(environment);
   const chainIds = useMemo(() => chains.map(c => c.id), [chains]);
   const { tokens, loading: tokensLoading } = useTokens(chainIds);
   const { quote, loading: quoteLoading, error: quoteError, provider: quoteProvider, fetchQuote, clearQuote } = useQuote();
