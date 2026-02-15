@@ -70,6 +70,8 @@ export const useWalletStore = create(
       
       setShowWalletModal: (show) => set({ showWalletModal: show }),
       setLastUsedChainId: (chainId) => set({ lastUsedChainId: chainId }),
+      setEnvironment: (env) => set({ environment: env }),
+      toggleEnvironment: () => set(state => ({ environment: state.environment === 'mainnet' ? 'testnet' : 'mainnet' })),
       
       // Connect EVM (MetaMask, Trust Wallet)
       connectEvm: async (walletType = 'metamask') => {
