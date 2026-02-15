@@ -127,6 +127,27 @@ export const Header = memo(() => {
 
           {/* Wallet Connection */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Network Toggle */}
+            <div className="flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-lg border border-white/20 bg-transparent">
+              <button
+                onClick={toggleEnvironment}
+                className="flex items-center gap-1.5 text-xs font-medium transition-colors"
+                data-testid="network-toggle"
+              >
+                {environment === 'mainnet' ? (
+                  <>
+                    <Globe className="w-3.5 h-3.5 text-[#C1FF72]" />
+                    <span className="hidden sm:inline text-[#C1FF72]">Mainnet</span>
+                  </>
+                ) : (
+                  <>
+                    <TestTube className="w-3.5 h-3.5 text-yellow-500" />
+                    <span className="hidden sm:inline text-yellow-500">Testnet</span>
+                  </>
+                )}
+              </button>
+            </div>
+
             {isConnected ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
