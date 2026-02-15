@@ -302,17 +302,10 @@ class RhinoService:
         use_authenticated: bool = True
     ) -> Optional[Dict]:
         """
-        Get a bridge+swap quote from Rhino.fi
+        Get a bridge or bridge+swap quote from Rhino.fi
         
-        Args:
-            chain_in: Source chain (e.g., "TRON")
-            chain_out: Destination chain (e.g., "SOLANA")
-            token_in: Source token (e.g., "USDT")
-            token_out: Destination token (e.g., "USDC")
-            amount: Amount to bridge (human readable)
-            depositor: Source wallet address
-            recipient: Destination wallet address
-            use_authenticated: Use authenticated endpoint (required for committing)
+        For same-token bridges (e.g., USDT -> USDT), use bridge/quote/user
+        For swaps (e.g., USDT -> USDC), use bridge/quote/bridge-swap/user
         """
         await self._ensure_session()
         
@@ -321,37 +314,63 @@ class RhinoService:
         token_in_norm = self.normalize_token(token_in)
         token_out_norm = self.normalize_token(token_out)
         
-        payload = {
-            "chainIn": chain_in_norm,
-            "chainOut": chain_out_norm,
-            "tokenIn": token_in_norm,
-            "tokenOut": token_out_norm,
-            "amount": str(amount),
-            "mode": "pay",  # User specifies pay amount
-            "depositor": depositor,
-            "recipient": recipient,
-            "amountNative": "0"
-        }
+        # Determine if this is a bridge-only or bridge+swap
+        is_same_token = token_in_norm == token_out_norm
         
-        url = self.config.QUOTE_URL if use_authenticated else self.config.PUBLIC_QUOTE_URL
+        if is_same_token:
+            # Bridge-only: same token on different chains
+            payload = {
+                "chainIn": chain_in_norm,
+                "chainOut": chain_out_norm,
+                "token": token_in_norm,
+                "amount": str(amount),
+                "mode": "pay",  # User specifies pay amount
+                "depositor": depositor,
+                "recipient": recipient,
+                "amountNative": "0"
+            }
+            url = self.config.BRIDGE_QUOTE_URL
+        else:
+            # Bridge + swap: different tokens
+            payload = {
+                "chainIn": chain_in_norm,
+                "chainOut": chain_out_norm,
+                "tokenIn": token_in_norm,
+                "tokenOut": token_out_norm,
+                "amount": str(amount),
+                "mode": "pay",
+                "depositor": depositor,
+                "recipient": recipient,
+                "amountNative": "0"
+            }
+            url = self.config.BRIDGE_SWAP_QUOTE_URL
         
-        # Authenticate if using authenticated endpoint
+        logger.info(f"Rhino.fi quote request: {chain_in_norm}/{token_in_norm} -> {chain_out_norm}/{token_out_norm}")
+        logger.info(f"Using endpoint: {url}")
+        logger.info(f"Payload: {payload}")
+        
+        # Authenticate to get JWT
         if use_authenticated:
-            if not await self._authenticate():
-                # Fall back to public endpoint
-                url = self.config.PUBLIC_QUOTE_URL
-                use_authenticated = False
+            auth_success = await self._authenticate()
+            if not auth_success:
+                logger.warning("Authentication failed, trying without JWT")
         
         try:
+            headers = self._get_headers(use_authenticated and self.jwt is not None)
+            logger.info(f"Request headers: {list(headers.keys())}")
+            
             async with self.session.post(
                 url,
                 json=payload,
-                headers=self._get_headers(use_authenticated)
+                headers=headers
             ) as resp:
                 response_text = await resp.text()
+                logger.info(f"Rhino.fi response status: {resp.status}")
+                logger.info(f"Rhino.fi response: {response_text[:500] if response_text else 'empty'}")
                 
                 if resp.status == 200 and response_text:
-                    data = await resp.json() if response_text else {}
+                    import json
+                    data = json.loads(response_text)
                     
                     # Parse response
                     fees = data.get("fees", {})
@@ -376,11 +395,31 @@ class RhinoService:
                         "recipient": data.get("recipient"),
                         "raw": data
                     }
+                elif resp.status == 401:
+                    logger.error(f"Rhino.fi authentication failed: {response_text[:200]}")
+                    return {
+                        "provider": "rhino",
+                        "error": "Authentication failed - check API key",
+                        "supported": False
+                    }
                 elif resp.status == 404:
                     logger.warning(f"Rhino.fi route not available (404): {chain_in_norm}/{token_in_norm} -> {chain_out_norm}/{token_out_norm}")
                     return {
                         "provider": "rhino",
-                        "error": "This route is not currently available on Rhino.fi. Try USDT/USDC pairs between supported chains.",
+                        "error": f"Route not available: {chain_in_norm} {token_in_norm} → {chain_out_norm} {token_out_norm}. Try USDT/USDC pairs between supported chains.",
+                        "supported": False
+                    }
+                elif resp.status == 400:
+                    logger.error(f"Rhino.fi bad request (400): {response_text[:200]}")
+                    import json
+                    try:
+                        err_data = json.loads(response_text)
+                        error_msg = err_data.get("message") or err_data.get("error") or response_text[:100]
+                    except:
+                        error_msg = response_text[:100]
+                    return {
+                        "provider": "rhino",
+                        "error": f"Invalid request: {error_msg}",
                         "supported": False
                     }
                 else:
