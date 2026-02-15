@@ -203,6 +203,7 @@ export const SwapCard = memo(({ onTxComplete }) => {
   const isTronRoute = fromToken?.chainId === TRON_CHAIN_ID || toToken?.chainId === TRON_CHAIN_ID;
   const isSolanaRoute = fromToken?.chainId === SOLANA_CHAIN_ID || toToken?.chainId === SOLANA_CHAIN_ID;
   const isRhinoRoute = isTronRoute || isSolanaRoute;
+  const isTronSourceSwap = fromToken?.chainId === TRON_CHAIN_ID;
   
   const handleRhinoSwap = useCallback(() => {
     setShowTronSwap(true);
