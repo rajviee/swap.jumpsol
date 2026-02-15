@@ -209,11 +209,13 @@ export function useQuote() {
     setError(null);
     
     try {
-      // Check if this is a Tron route - use Rhino.fi
-      const isTronRoute = fromChain === TRON_CHAIN_ID || toChain === TRON_CHAIN_ID;
+      // Check if this is a Tron or Solana route - use Rhino.fi
+      const isRhinoRoute = 
+        fromChain === TRON_CHAIN_ID || toChain === TRON_CHAIN_ID ||
+        fromChain === SOLANA_CHAIN_ID || toChain === SOLANA_CHAIN_ID;
       
-      if (isTronRoute) {
-        // Use Rhino.fi bridge API
+      if (isRhinoRoute) {
+        // Use Rhino.fi bridge API for Tron and Solana routes
         const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/bridge/quote`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
