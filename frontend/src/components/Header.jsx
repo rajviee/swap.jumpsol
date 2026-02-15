@@ -29,6 +29,8 @@ export const Header = memo(() => {
     disconnectSolana,
     disconnectTron,
     activeWalletType,
+    environment,
+    toggleEnvironment,
   } = useWalletStore();
 
   const isConnected = evmConnected || solanaConnected || tronConnected;
