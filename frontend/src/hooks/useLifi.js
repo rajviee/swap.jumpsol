@@ -80,8 +80,26 @@ export const requiresBridge = (chainId) => {
   return chainId === TRON_CHAIN_ID;
 };
 
+// Testnet chain mappings
+export const TESTNET_CHAINS = {
+  // Ethereum Sepolia
+  11155111: { name: 'Sepolia', symbol: 'ETH', color: '#627EEA', logo: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/ethereum.svg' },
+  // Polygon Mumbai (deprecated but still useful)
+  80001: { name: 'Mumbai', symbol: 'MATIC', color: '#8247E5', logo: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/polygon.svg' },
+  // BSC Testnet
+  97: { name: 'BSC Testnet', symbol: 'tBNB', color: '#F3BA2F', logo: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/bsc.svg' },
+  // Avalanche Fuji
+  43113: { name: 'Fuji', symbol: 'AVAX', color: '#E84142', logo: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/avalanche.svg' },
+  // Arbitrum Sepolia
+  421614: { name: 'Arbitrum Sepolia', symbol: 'ETH', color: '#12AAFF', logo: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/arbitrum.svg' },
+  // Optimism Sepolia
+  11155420: { name: 'Optimism Sepolia', symbol: 'ETH', color: '#FF0420', logo: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/optimism.svg' },
+  // Base Sepolia
+  84532: { name: 'Base Sepolia', symbol: 'ETH', color: '#0052FF', logo: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/base.svg' },
+};
+
 // Hooks
-export function useChains() {
+export function useChains(environment = 'mainnet') {
   const [chains, setChains] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -94,15 +112,48 @@ export function useChains() {
         const data = await lifiApi.getChains();
         if (!mounted) return;
         
-        const all = data.chains || [];
+        let all = data.chains || [];
+        
+        // Filter chains based on environment
+        if (environment === 'testnet') {
+          // Include only testnet chains
+          const testnetChainIds = Object.keys(TESTNET_CHAINS).map(Number);
+          all = all.filter(c => testnetChainIds.includes(c.id));
+          
+          // Add testnet chain info
+          all = all.map(c => ({
+            ...c,
+            ...TESTNET_CHAINS[c.id],
+            isTestnet: true
+          }));
+          
+          // If no testnet chains from API, use fallback
+          if (all.length === 0) {
+            all = Object.entries(TESTNET_CHAINS).map(([id, info]) => ({
+              id: Number(id),
+              key: info.name.toLowerCase().replace(/\s+/g, '-'),
+              name: info.name,
+              coin: info.symbol,
+              isTestnet: true,
+              ...info
+            }));
+          }
+        } else {
+          // Mainnet: filter out testnet chains
+          const testnetChainIds = Object.keys(TESTNET_CHAINS).map(Number);
+          all = all.filter(c => !testnetChainIds.includes(c.id));
+        }
         
         // Sort by priority
         const priority = all.filter(c => PRIORITY_CHAINS.includes(c.id));
         const others = all.filter(c => !PRIORITY_CHAINS.includes(c.id));
         priority.sort((a, b) => PRIORITY_CHAINS.indexOf(a.id) - PRIORITY_CHAINS.indexOf(b.id));
         
-        // Add custom chains
-        const combined = [...priority, ...CUSTOM_CHAINS.filter(c => !priority.some(p => p.id === c.id)), ...others];
+        // Add custom chains (only for mainnet)
+        const combined = environment === 'mainnet' 
+          ? [...priority, ...CUSTOM_CHAINS.filter(c => !priority.some(p => p.id === c.id)), ...others]
+          : [...priority, ...others];
+        
         setChains(combined);
       } catch (err) {
         if (mounted) setError(err.message);
@@ -113,7 +164,7 @@ export function useChains() {
     
     fetch();
     return () => { mounted = false; };
-  }, []);
+  }, [environment]);
 
   return { chains, loading, error };
 }
