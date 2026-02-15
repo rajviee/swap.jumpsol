@@ -8,7 +8,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { Wallet, ChevronDown, Copy, ExternalLink, LogOut } from 'lucide-react';
+import { Switch } from './ui/switch';
+import { Wallet, ChevronDown, Copy, ExternalLink, LogOut, Globe, TestTube } from 'lucide-react';
 import { toast } from 'sonner';
 import { memo, useCallback, useState } from 'react';
 import { CHAIN_INFO } from '../hooks/useLifi';
