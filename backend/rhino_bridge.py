@@ -422,6 +422,28 @@ class RhinoService:
                         "error": f"Invalid request: {error_msg}",
                         "supported": False
                     }
+                elif resp.status == 422:
+                    logger.error(f"Rhino.fi validation error (422): {response_text[:500]}")
+                    import json
+                    try:
+                        err_data = json.loads(response_text)
+                        error_msg = err_data.get("message", response_text[:200])
+                        # Parse common validation errors
+                        if "Checksums did not match" in error_msg:
+                            error_msg = "Invalid wallet address checksum. Please check your connected wallet address."
+                        elif "TronAddress" in error_msg:
+                            error_msg = "Invalid TRON address format. Please use a valid TRC address."
+                        elif "SolanaAddress" in error_msg:
+                            error_msg = "Invalid Solana address format. Please use a valid Solana public key."
+                        elif "EthAddressSchema" in error_msg:
+                            error_msg = "Invalid EVM address format. Please use a valid Ethereum-compatible address."
+                    except:
+                        error_msg = "Address validation failed. Please check your wallet addresses."
+                    return {
+                        "provider": "rhino",
+                        "error": error_msg,
+                        "supported": False
+                    }
                 else:
                     logger.error(f"Rhino.fi quote failed: {resp.status} - {response_text[:200]}")
                     return {
