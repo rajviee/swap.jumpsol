@@ -25,8 +25,10 @@ class RhinoConfig:
     AUTH_URL = f"{BASE_URL}/authentication/auth/apiKey"
     CONFIGS_URL = f"{BASE_URL}/bridge/configs"
     SWAP_CONFIGS_URL = f"{BASE_URL}/bridge/bridge-swap-token-configs"
-    QUOTE_URL = f"{BASE_URL}/bridge/quote/bridge-swap/user"
-    PUBLIC_QUOTE_URL = f"{BASE_URL}/bridge/quote/bridge-swap/public"
+    # Correct endpoints per Rhino.fi docs
+    BRIDGE_QUOTE_URL = f"{BASE_URL}/bridge/quote/user"
+    BRIDGE_SWAP_QUOTE_URL = f"{BASE_URL}/bridge/quote/bridge-swap/user"
+    PUBLIC_QUOTE_URL = f"{BASE_URL}/bridge/quote/public"
     COMMIT_URL = f"{BASE_URL}/bridge/quote/commit"
     STATUS_URL = f"{BASE_URL}/history/bridge"
     
