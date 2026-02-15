@@ -488,9 +488,17 @@ class RhinoService:
 class BridgeRouter:
     """
     Routes transactions to the appropriate provider:
-    - Rhino.fi for Tron routes
+    - Rhino.fi for Tron and Solana routes (they specialize in these)
     - LI.FI for everything else
     """
+    
+    # Chain IDs that should use Rhino.fi
+    RHINO_CHAIN_IDS = {
+        728126428,        # Tron
+        1151111081099710, # Solana
+    }
+    
+    RHINO_CHAIN_NAMES = {"TRON", "TRX", "SOLANA", "SOL"}
     
     def __init__(self, lifi_base_url: str = "https://li.quest/v1"):
         self.rhino = RhinoService()
@@ -506,15 +514,26 @@ class BridgeRouter:
         if self.session:
             await self.session.close()
     
-    def _is_tron_chain_id(self, chain_id: Any) -> bool:
-        """Check if chain ID represents Tron"""
-        # Tron chain ID in our system
-        TRON_CHAIN_ID = 728126428
-        return str(chain_id) == str(TRON_CHAIN_ID) or str(chain_id).upper() in ["TRON", "TRX"]
+    def _is_rhino_chain(self, chain_id: Any) -> bool:
+        """Check if chain ID should use Rhino.fi (Tron or Solana)"""
+        chain_str = str(chain_id)
+        
+        # Check numeric chain IDs
+        try:
+            if int(chain_str) in self.RHINO_CHAIN_IDS:
+                return True
+        except ValueError:
+            pass
+        
+        # Check chain name aliases
+        if chain_str.upper() in self.RHINO_CHAIN_NAMES:
+            return True
+        
+        return False
     
     def get_provider_for_route(self, chain_in: Any, chain_out: Any) -> str:
         """Determine which provider to use for a route"""
-        if self._is_tron_chain_id(chain_in) or self._is_tron_chain_id(chain_out):
+        if self._is_rhino_chain(chain_in) or self._is_rhino_chain(chain_out):
             return "rhino"
         return "lifi"
     
